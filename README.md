@@ -152,7 +152,6 @@ This project builds upon and is inspired by several awesome community projects:
 
 ### Similar Tools 🔍
 - [semgrep-vscode](https://github.com/semgrep/semgrep-vscode) - Official VSCode extension for Semgrep
-- [semgrep-action](https://github.com/semgrep/semgrep-action) - Official GitHub Action for Semgrep
 - [semgrep-intellij](https://github.com/semgrep/semgrep-intellij) - IntelliJ plugin for Semgrep
 
 ### Community Projects 🌟
