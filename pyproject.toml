@@ -1,0 +1,11 @@
+[project]
+name = "mcp-server"
+version = "0.1.0"
+description = "MCP Server for using Semgrep to scan code"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "mcp[cli]>=1.3.0",
+    "semgrep>=1.10.0",
+    "fastapi>=0.115.11",
+]
