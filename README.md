@@ -105,7 +105,7 @@ results = client.call_tool("semgrep_scan", {
 4. Name: `Semgrep`, Type: `sse`, Server URL: `http://127.0.0.1:8000/sse`
 5. Ensure the MCP server is enabled
 
-![cursor MCP settings](/docs/cursor.png)
+![cursor MCP settings](/images/cursor.png)
 
 
 ## Advanced Usage
