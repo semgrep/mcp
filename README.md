@@ -24,7 +24,7 @@
 </p>
 </br>
 
-# Semgrep MCP Server
+# [beta] Semgrep MCP Server
 
 MCP Server for using Semgrep to scan code
 
