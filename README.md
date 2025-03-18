@@ -86,7 +86,7 @@ uv run mcp run server.py
 from mcp.client import Client
 
 client = Client()
-client.connect("localhost:8080")
+client.connect("localhost:8000")
 
 # Scan code for security issues
 results = client.call_tool("semgrep_scan", {

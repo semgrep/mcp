@@ -748,6 +748,6 @@ if __name__ == "__main__":
     # Start the server with SSE support
     print("Starting Semgrep MCP server with SSE support...")
     print("This server can be used with Cursor and other MCP clients")
-    print("Server is running at http://localhost:8080")
+    print("Server is running at http://localhost:8000")
 
-    mcp.run(host="0.0.0.0", port=8080)
+    mcp.run(host="0.0.0.0", port=8000)
