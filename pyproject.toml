@@ -1,5 +1,5 @@
 [project]
-name = "mcp-server"
+name = "semgrep-mcp"
 version = "0.1.0"
 description = "MCP Server for using Semgrep to scan code"
 readme = "README.md"
