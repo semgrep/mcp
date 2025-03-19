@@ -107,6 +107,18 @@ results = client.call_tool("semgrep_scan", {
 
 ![cursor MCP settings](/images/cursor.png)
 
+You can also set it up by adding this to `~/.cursor/mcp.json`
+
+```json
+{
+  "mcpServers": {
+    "Semgrep": {
+      "url": "https://mcp.semgrep.ai/sse"
+    }
+  }
+}
+```
+
 
 ## Advanced Usage
 
