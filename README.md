@@ -113,7 +113,7 @@ You can also set it up by adding this to `~/.cursor/mcp.json`
 {
   "mcpServers": {
     "Semgrep": {
-      "url": "https://mcp.semgrep.ai/sse"
+      "url": "http://localhost:8000/sse"
     }
   }
 }
