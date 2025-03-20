@@ -28,6 +28,10 @@
 
 MCP Server for using Semgrep to scan code
 
+<a href="https://glama.ai/mcp/servers/4iqti5mgde">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/4iqti5mgde/badge" alt="Semgrep Server MCP server" />
+</a>
+
 [MCP](https://modelcontextprotocol.io/) is like LSP or unix pipes but for LLMs and AI Agents and coding tools such as Cursor.
 
 ## Features
