@@ -28,6 +28,7 @@
 
 MCP Server for using Semgrep to scan code.
 
+## Demo
 <a href="https://www.loom.com/share/8535d72e4cfc4e1eb1e03ea223a702df"> <img style="max-width:300px;" src="https://cdn.loom.com/sessions/thumbnails/8535d72e4cfc4e1eb1e03ea223a702df-1047fabea7261abb-full-play.gif"> </a>
 
 [MCP](https://modelcontextprotocol.io/) is like LSP or Unix pipes for LLMs, AI Agents, and coding tools such as Cursor.
