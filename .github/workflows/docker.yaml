@@ -68,6 +68,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=image,name=target,annotation-index.org.opencontainers.image.description=${{ steps.meta.outputs.labels.org.opencontainers.image.description }}
       
       - name: Generate artifact attestation
         if: ${{ github.event_name != 'pull_request' }}
