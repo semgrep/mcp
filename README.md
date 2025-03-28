@@ -174,9 +174,9 @@ This project builds upon and is inspired by several awesome community projects:
 
 ### MCP Server Registries
 
-#### [Glama](https://glama.ai/mcp/servers/@semgrep/mcp)
+- [Glama](https://glama.ai/mcp/servers/@semgrep/mcp)
 <a href="https://glama.ai/mcp/servers/4iqti5mgde">
   <img width="380" height="200" src="https://glama.ai/mcp/servers/4iqti5mgde/badge" alt="Semgrep Server MCP server" />
 </a>
 
-#### [MCP.so](https://mcp.so/server/mcp/semgrep)
+- [MCP.so](https://mcp.so/server/mcp/semgrep)
