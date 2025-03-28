@@ -71,7 +71,7 @@ docker build -t mcp-server .
 
 ### CLI
 ```bash
-uv run mcp run server.py
+uv run mcp run server.py -t sse
 ```
 
 [Additional info](https://github.com/modelcontextprotocol/python-sdk) on the python mcp sdk
