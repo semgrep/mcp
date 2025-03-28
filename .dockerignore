@@ -1,2 +1,13 @@
 .venv/
 __pycache__/
+images/
+.git/
+.github/
+.vscode/
+.DS_Store
+.gitignore
+.gitmodules
+.pre-commit-config.yaml
+.ruff_cache/
+.vscode/
+.venv/
