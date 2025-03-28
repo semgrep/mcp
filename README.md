@@ -26,11 +26,7 @@
 
 # [beta] Semgrep MCP Server
 
-MCP Server for using Semgrep to scan code
-
-<a href="https://glama.ai/mcp/servers/4iqti5mgde">
-  <img width="380" height="200" src="https://glama.ai/mcp/servers/4iqti5mgde/badge" alt="Semgrep Server MCP server" />
-</a>
+MCP Server for using Semgrep to scan code.
 
 [MCP](https://modelcontextprotocol.io/) is like LSP or unix pipes but for LLMs and AI Agents and coding tools such as Cursor.
 
@@ -175,3 +171,12 @@ This project builds upon and is inspired by several awesome community projects:
 ### Community Projects 🌟
 - [semgrep-rules](https://github.com/semgrep/semgrep-rules) - The official collection of Semgrep rules
 - [mcp-server-semgrep](https://github.com/Szowesgad/mcp-server-semgrep) - Original inspiration written by [Szowesgad](https://github.com/Szowesgad) and [stefanskiasan](https://github.com/stefanskiasan)
+
+### MCP Server Registries
+
+#### [Glama](https://glama.ai/mcp/servers/@semgrep/mcp)
+<a href="https://glama.ai/mcp/servers/4iqti5mgde">
+  <img width="380" height="200" src="https://glama.ai/mcp/servers/4iqti5mgde/badge" alt="Semgrep Server MCP server" />
+</a>
+
+#### [MCP.so](https://mcp.so/server/mcp/semgrep)
