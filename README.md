@@ -28,7 +28,7 @@
 
 MCP Server for using Semgrep to scan code.
 
-[MCP](https://modelcontextprotocol.io/) is like LSP or unix pipes but for LLMs and AI Agents and coding tools such as Cursor.
+[MCP](https://modelcontextprotocol.io/) is like LSP or Unix pipes for LLMs, AI Agents, and coding tools such as Cursor.
 
 ## Features
 
@@ -63,8 +63,6 @@ This MCP Server provides a comprehensive interface to Semgrep through the Model 
 
 ### Docker
 
-Also published to [ghcr.io/semgrep/mcp](http://ghcr.io/semgrep/mcp).
-
 ```bash
 docker build -t mcp-server .
 ```
@@ -82,6 +80,12 @@ uv run mcp run server.py -t sse
 
 ```bash
 docker run -p 8000:8000 mcp-server
+```
+
+Also published to [ghcr.io/semgrep/mcp](http://ghcr.io/semgrep/mcp).
+
+```bash
+docker run -p 8000:8000 ghcr.io/semgrep/mcp:latest
 ```
 
 ### Creating your own client
