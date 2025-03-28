@@ -30,6 +30,8 @@ MCP Server for using Semgrep to scan code.
 
 [MCP](https://modelcontextprotocol.io/) is like LSP or Unix pipes for LLMs, AI Agents, and coding tools such as Cursor.
 
+![demo](/images/demo.mp4)
+
 ## Features
 
 This MCP Server provides a comprehensive interface to Semgrep through the Model Context Protocol, offering the following tools:
