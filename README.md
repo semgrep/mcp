@@ -50,6 +50,8 @@ This MCP Server provides a comprehensive interface to Semgrep through the Model 
 
 ## Installation
 
+### CLI
+
 1. Install `uv` using their [installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
 1. Ensure you have Python 3.13+ installed
 2. Clone this repository
