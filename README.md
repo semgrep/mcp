@@ -63,6 +63,8 @@ This MCP Server provides a comprehensive interface to Semgrep through the Model 
 
 ### Docker
 
+Also published to [ghcr.io/semgrep/mcp](http://ghcr.io/semgrep/mcp).
+
 ```bash
 docker build -t mcp-server .
 ```
