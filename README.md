@@ -69,18 +69,18 @@ docker build -t mcp-server .
 
 ## Usage
 
-### Docker
-
-```bash
-docker run -p 8000:8000 mcp-server
-```
-
 ### CLI
 ```bash
 uv run mcp run server.py
 ```
 
 [Additional info](https://github.com/modelcontextprotocol/python-sdk) on the python mcp sdk
+
+### Docker
+
+```bash
+docker run -p 8000:8000 mcp-server
+```
 
 ### Creating your own client
 
