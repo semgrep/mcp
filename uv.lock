@@ -329,23 +329,6 @@ cli = [
 ]
 
 [[package]]
-name = "mcp-server"
-version = "0.1.0"
-source = { virtual = "." }
-dependencies = [
-    { name = "fastapi" },
-    { name = "mcp", extra = ["cli"] },
-    { name = "semgrep" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "fastapi", specifier = ">=0.115.11" },
-    { name = "mcp", extras = ["cli"], specifier = ">=1.3.0" },
-    { name = "semgrep", specifier = ">=1.10.0" },
-]
-
-[[package]]
 name = "mdurl"
 version = "0.1.2"
 source = { registry = "https://pypi.org/simple" }
@@ -690,6 +673,23 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/15/b4/6ff2308f94e5ac0fd325bc0d420ac4858cba4b51734c297739b70df435e2/semgrep-1.111.0-cp39.cp310.cp311.py39.py310.py311-none-macosx_11_0_arm64.whl", hash = "sha256:cdd31e544a1c3dfae09b1c8018b3527b69a4ab7934839b01c35719b2fbaed1ff", size = 33303083 },
     { url = "https://files.pythonhosted.org/packages/46/0f/98146f2d08377754322b1ede3b117af83661c03380bbf046f3866d052eed/semgrep-1.111.0-cp39.cp310.cp311.py39.py310.py311-none-musllinux_1_0_aarch64.manylinux2014_aarch64.whl", hash = "sha256:642110057c7602cde8f7cb4db81fd11f5b43e9ebd272b3bbedae6f341ea3afc4", size = 34165906 },
     { url = "https://files.pythonhosted.org/packages/00/d2/6c1786bf6dafaadd82e8817a9ef18713400da01f485a9c13a521e6d96cb4/semgrep-1.111.0-cp39.cp310.cp311.py39.py310.py311-none-musllinux_1_0_x86_64.manylinux2014_x86_64.whl", hash = "sha256:0c40d3d76a4c6cedc7ca010233ca04c5435b761478fa322baac40179d15b7d35", size = 27547233 },
+]
+
+[[package]]
+name = "semgrep-mcp"
+version = "0.1.0"
+source = { virtual = "." }
+dependencies = [
+    { name = "fastapi" },
+    { name = "mcp", extra = ["cli"] },
+    { name = "semgrep" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.115.11" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.3.0" },
+    { name = "semgrep", specifier = ">=1.10.0" },
 ]
 
 [[package]]
