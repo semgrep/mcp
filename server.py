@@ -262,7 +262,7 @@ async def start_scan_from_content(ctx: Context, code_files: List[Dict[str, str]]
     Args:
         ctx: MCP context for sending notifications
         code_files: List of dictionaries with 'filename' and 'content' keys
-        config: Semgrep configuration (e.g. "auto" or absolute path to rule file)
+        config: Optional Semgrep configuration (e.g. "auto" or absolute path to rule file)
         
     Returns:
         Dictionary with scan information
@@ -312,7 +312,7 @@ async def run_background_scan_with_content(ctx: Context, scan_id: str, code_file
         ctx: MCP context for sending notifications
         scan_id: Unique identifier for the scan
         code_files: List of dictionaries with 'filename' and 'content' keys
-        config: Semgrep configuration
+        config: Optional Semgrep configuration (e.g. "auto" or absolute path to rule file)
     """
     try:
         # Initial notification
@@ -325,11 +325,8 @@ async def run_background_scan_with_content(ctx: Context, scan_id: str, code_file
         temp_dir = await create_temp_files_from_code_content(code_files)
         temp_dirs[scan_id] = temp_dir
         
-        # Ensure semgrep is available
-        semgrep_path = ensure_semgrep_available()
-        
-        # Build command arguments
-        args = [semgrep_path, "scan", "--json", "--config", config, temp_dir]
+
+        args = get_semgrep_args(temp_dir, config)
         
         # Execute semgrep command
         process = await asyncio.create_subprocess_exec(
@@ -416,7 +413,7 @@ async def report_scan_progress(ctx: Context, scan_id: str):
         while progress < 100:
             await asyncio.sleep(2)  # Wait between progress updates
             
-            # Simulate progress
+            # Simulate progress TODO tie to actual progress
             progress += 5
             if progress > 95:
                 progress = 95  # Cap at 95% until complete
@@ -429,6 +426,31 @@ async def report_scan_progress(ctx: Context, scan_id: str):
     except asyncio.CancelledError:
         # Task was cancelled, which is expected when scan completes
         pass
+
+def get_semgrep_args(temp_dir: str, config: Optional[str] = None) -> List[str]:
+    """
+    Builds command arguments for semgrep scan
+    
+    Args:
+        temp_dir: Path to temporary directory containing the files
+        config: Optional Semgrep configuration (e.g. "auto" or absolute path to rule file)
+    
+    Returns:
+        List of command arguments
+    """
+     # Ensure semgrep is available
+    semgrep_path = ensure_semgrep_available()
+
+    # Build command arguments and just run semgrep scan 
+    # if no config is provided to allow for either the default "auto" 
+    # or whatever the logged in config is
+    args = [semgrep_path, "scan", "--json"]
+    if config:
+        args.extend(["--config", config])
+    args.append(temp_dir)
+    return args
+
+
 
 @mcp.tool()
 async def get_scan_status(scan_id: str) -> Dict[str, Any]:
@@ -494,10 +516,12 @@ async def get_supported_languages() -> List[str]:
     try:
         # Ensure semgrep is available
         semgrep_path = ensure_semgrep_available()
+
+        args = [semgrep_path, "show", "supported-languages"]
         
         # Execute semgrep command to get supported languages
         process = await asyncio.create_subprocess_exec(
-            semgrep_path, 'show', 'supported-languages',
+            *args,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
@@ -529,7 +553,7 @@ async def semgrep_scan(code_files: List[Dict[str, str]], config: str = DEFAULT_S
     
     Args:
         code_files: List of dictionaries with 'filename' and 'content' keys
-        config: Semgrep configuration (e.g. "auto" or absolute path to rule file)
+        config: Optional Semgrep configuration (e.g. "auto" or absolute path to rule file)
         
     Returns:
         Dictionary with scan results in Semgrep JSON format
@@ -554,12 +578,8 @@ async def semgrep_scan(code_files: List[Dict[str, str]], config: str = DEFAULT_S
     try:
         # Create temporary files from code content
         temp_dir = await create_temp_files_from_code_content(code_files)
-        
-        # Ensure semgrep is available
-        semgrep_path = ensure_semgrep_available()
-        
-        # Build command arguments
-        args = [semgrep_path, "scan", "--json", "--config", config, temp_dir]
+
+        args = get_semgrep_args(temp_dir, config)
         
         # Execute semgrep command
         process = await asyncio.create_subprocess_exec(
@@ -669,11 +689,7 @@ async def run_background_scan_with_progress(ctx: Context, scan_id: str, target_p
         # Update status
         scan_status[scan_id]["status"] = "in_progress"
         
-        # Ensure semgrep is available
-        semgrep_path = ensure_semgrep_available()
-        
-        # Build command arguments
-        args = [semgrep_path, "scan", "--json", "--config", config, target_path]
+        args = get_semgrep_args(target_path, config)
         
         # Execute semgrep command
         process = await asyncio.create_subprocess_exec(
