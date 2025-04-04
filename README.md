@@ -149,7 +149,7 @@ filtered = client.call_tool("filter_results", {
 })
 ```
 
-## Developlment
+## Development
 
 ### Running the Development Server
 
