@@ -1,6 +1,7 @@
 name: Publish to GitHub Package Registry
 
 on:
+  workflow_dispatch:
   release:
     types: [created]
   push:
@@ -10,15 +11,16 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
+    environment: pypi
     permissions:
       contents: read
       packages: write
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
     - name: Set up Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55 # v5.5.0
       with:
         python-version: '3.13'
 
@@ -36,4 +38,3 @@ jobs:
       run: |
         python -m twine upload --repository-url https://upload.pypi.org/legacy/ dist/*
         python -m twine upload --repository-url https://maven.pkg.github.com/${{ github.repository }} dist/*
-      continue-on-error: true 
