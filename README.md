@@ -73,8 +73,21 @@ docker build -t mcp-server .
 ## Usage
 
 ### CLI
+
+#### SSE<a name="sse-mode"></a>
+Run by invoking uv directly
 ```bash
 uv run mcp run server.py -t sse
+```
+Or as a uv script
+```bash
+chmod +x server.py
+./server.py
+```
+
+#### stdio
+```bash
+uv run mcp run server.py -t stdio
 ```
 
 [Additional info](https://github.com/modelcontextprotocol/python-sdk) on the python mcp sdk
@@ -178,8 +191,10 @@ Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace
 }
 ```
 
+
 ## Cursor Plugin
 
+1. Ensure your Semgrep MCP is [running in SSE mode](#sse-mode)
 1. Go to Cursor > Settings > Cursor Settings
 2. Choose the `MCP` tab
 3. Click "Add new MCP server"
@@ -219,7 +234,7 @@ filtered = client.call_tool("filter_results", {
 })
 ```
 
-## Developlment
+## Development
 
 ### Running the Development Server
 
