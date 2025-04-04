@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.13"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Seth Seth Jaksik", email = "seth@semgrep.com" }
+    { name = "Seth Seth Jaksik", email = "seth@semgrep.com" },
     { name = "Drew Dennison", email = "drew@semgrep.com" }
 ]
 classifiers = [
