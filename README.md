@@ -119,6 +119,79 @@ results = client.call_tool("semgrep_scan", {
 })
 ```
 
+## VS Code Integration
+
+For one-click installation, click one of the install buttons below:
+
+[![Install with UV in VS Code](https://img.shields.io/badge/VS_Code-UV-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uv%22%2C%22args%22%3A%5B%22run%22%2C%22mcp%22%2C%22run%22%2C%22server.py%22%2C%22-t%22%2C%22sse%22%5D%7D) [![Install with UV in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-UV-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uv%22%2C%22args%22%3A%5B%22run%22%2C%22mcp%22%2C%22run%22%2C%22server.py%22%2C%22-t%22%2C%22sse%22%5D%7D&quality=insiders)
+
+[![Install with Docker in VS Code](https://img.shields.io/badge/VS_Code-Docker-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-p%22%2C%228000%3A8000%22%2C%22ghcr.io%2Fsemgrep%2Fmcp%3Alatest%22%5D%7D) [![Install with Docker in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-Docker-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%22-p%22%2C%228000%3A8000%22%2C%22ghcr.io%2Fsemgrep%2Fmcp%3Alatest%22%5D%7D&quality=insiders)
+
+### Manual Installation
+
+Click the install buttons at the top of this section for the quickest installation method. Alternatively, you can manually configure the server using one of the methods below.
+
+#### Using UV
+
+Add the following JSON block to your User Settings (JSON) file in VS Code. You can do this by pressing `Ctrl + Shift + P` and typing `Preferences: Open User Settings (JSON)`.
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "semgrep": {
+        "command": "uv",
+        "args": ["run", "mcp", "run", "server.py", "-t", "sse"]
+      }
+    }
+  }
+}
+```
+
+Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "semgrep": {
+      "command": "uv",
+        "args": ["run", "mcp", "run", "server.py", "-t", "sse"]
+    }
+  }
+}
+```
+
+#### Using Docker
+
+Add the following JSON block to your User Settings (JSON) file in VS Code:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "semgrep": {
+        "command": "docker",
+        "args": ["run", "-p", "8000:8000", "ghcr.io/semgrep/mcp:latest"]
+      }
+    }
+  }
+}
+```
+
+Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "semgrep": {
+      "command": "docker",
+      "args": ["run", "-p", "8000:8000", "ghcr.io/semgrep/mcp:latest"]
+    }
+  }
+}
+```
+
+
 ## Cursor Plugin
 
 1. Ensure your Semgrep MCP is [running in SSE mode](#sse-mode)
