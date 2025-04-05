@@ -735,11 +735,6 @@ async def run_background_scan_with_progress(ctx: Context, scan_id: str, target_p
         }
         ctx.set_notification(f"Scan {scan_id} failed: {str(e)}")
 
-def validate_sse_params(ctx: click.Context, param: click.Parameter, value: Any) -> Any:
-    """Validates that host and port are only set when using SSE transport"""
-    if ctx.params.get('transport') != 'sse' and value != param.default:
-        raise click.BadParameter(f"{param.name} can only be set when transport is 'sse'")
-    return value
 
 @click.command()
 @click.option(
@@ -747,19 +742,6 @@ def validate_sse_params(ctx: click.Context, param: click.Parameter, value: Any) 
     type=click.Choice(["stdio", "sse"]),
     default="stdio",
     help="Transport protocol to use (stdio or sse)"
-)
-@click.option(
-    "--host",
-    default="127.0.0.1",
-    callback=validate_sse_params,
-    help="Host to bind to when using SSE transport"
-)
-@click.option(
-    "--port",
-    default=8000,
-    type=int,
-    callback=validate_sse_params,
-    help="Port to bind to when using SSE transport"
 )
 def cli(transport: str, host: str, port: int):
     """Entry point for the CLI.
@@ -770,4 +752,4 @@ def cli(transport: str, host: str, port: int):
     if transport == "stdio":
         asyncio.run(mcp.run(transport="stdio"))
     else:  # sse
-        asyncio.run(mcp.run(transport="sse", host=host, port=port))
+        asyncio.run(mcp.run(transport="sse"))
