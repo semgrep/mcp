@@ -12,17 +12,14 @@ from mcp.server.fastmcp import FastMCP, Context
 import subprocess
 import json
 import os
-import re
-import sys
-import shlex
 import time
 import tempfile
 import uuid
-import argparse
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple, Union
 from time import sleep
 import asyncio
+import click
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -753,3 +750,22 @@ async def run_background_scan_with_progress(ctx: Context, scan_id: str, target_p
             "error": str(e)
         }
         ctx.set_notification(f"Scan {scan_id} failed: {str(e)}")
+
+
+@click.command()
+@click.option(
+    "-t", "--transport",
+    type=click.Choice(["stdio", "sse"]),
+    default="stdio",
+    help="Transport protocol to use (stdio or sse)"
+)
+def cli(transport: str):
+    """Entry point for the CLI.
+    
+    Supports both stdio and sse transports. For stdio, it will read from stdin and write to stdout.
+    For sse, it will start an HTTP server on the specified host and port.
+    """
+    if transport == "stdio":
+        asyncio.run(mcp.run(transport="stdio"))
+    else:  # sse
+        asyncio.run(mcp.run(transport="sse"))

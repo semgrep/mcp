@@ -1,17 +1,13 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "semgrep-mcp"
-version = "0.1.0-beta.2"
+version = "0.1.4"
 description = "MCP Server for using Semgrep to scan code"
 readme = "README.md"
 requires-python = ">=3.13"
 license = { file = "LICENSE" }
 authors = [
-    { name = "Seth Seth Jaksik", email = "seth@semgrep.com" },
-    { name = "Drew Dennison", email = "drew@semgrep.com" }
+    { name = "Seth Jaksik", email = "seth@semgrep.com" },
+    { name = "Drew Dennison", email = "drew@semgrep.com" },
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -25,6 +21,13 @@ dependencies = [
     "semgrep>=1.10.0",
     "fastapi>=0.115.11",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+semgrep-mcp = "server:cli"
 
 [project.urls]
 Homepage = "https://github.com/semgrep/mcp"
