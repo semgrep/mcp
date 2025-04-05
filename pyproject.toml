@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "semgrep-mcp"
-version = "0.1.0-beta"
+version = "0.1.0-beta.1"
 description = "MCP Server for using Semgrep to scan code"
 readme = "README.md"
 requires-python = ">=3.13"
