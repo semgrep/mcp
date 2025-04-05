@@ -128,10 +128,10 @@ semgrep-mcp --help
 ```bash
 uv run mcp run server.py -t sse
 ```
-Or as a `uv` script
+Or as a script
 ```bash
 chmod +x server.py
-./server.py
+./server.py -t sse
 ```
 
 ##### STDIO Mode<a name="stdio-mode"></a>
