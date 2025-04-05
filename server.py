@@ -1,31 +1,26 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --with mcp mcp run -t sse
+# /// script
+# requires-python = ">=3.8"
+# dependencies = [
+#     "mcp-server",
+#     "semgrep",
+#     "fastmcp"
+# ]
+# ///
 from enum import Enum, auto
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import FastMCP, Context
 import subprocess
 import json
 import os
-import re
-import sys
-import shlex
 import time
 import tempfile
 import uuid
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple, Union
 from time import sleep
-from mcp.server.fastmcp import FastMCP, Context
-import subprocess
-import json
-import os
-import asyncio  # Added asyncio import
+import asyncio
+import click
 
-# ---------------------------------------------------------------------------------
-# HOW TO RUN WITH INSPECTOR:
-# 1. Start this server: python server.py
-# 2. In another terminal, run the inspector with timeout parameter:
-#    npx @modelcontextprotocol/inspector
-# 3. Open browser to: http://localhost:5173/?timeout=300000
-#    (The timeout is in milliseconds, so 300000 = 300 seconds = 5 minutes)
 # ---------------------------------------------------------------------------------
 # Constants
 DEFAULT_SEMGREP_CONFIG = "auto"
@@ -46,7 +41,6 @@ mcp = FastMCP(
     "Semgrep", 
     version="1.0.0", 
     request_timeout=300, 
-    enable_sse=True
 )
 
 # Error codes
@@ -742,12 +736,20 @@ async def run_background_scan_with_progress(ctx: Context, scan_id: str, target_p
         ctx.set_notification(f"Scan {scan_id} failed: {str(e)}")
 
 
-
-
-if __name__ == "__main__":
-    # Start the server with SSE support
-    print("Starting Semgrep MCP server with SSE support...")
-    print("This server can be used with Cursor and other MCP clients")
-    print("Server is running at http://localhost:8000")
-
-    mcp.run(host="0.0.0.0", port=8000)
+@click.command()
+@click.option(
+    "-t", "--transport",
+    type=click.Choice(["stdio", "sse"]),
+    default="stdio",
+    help="Transport protocol to use (stdio or sse)"
+)
+def cli(transport: str):
+    """Entry point for the CLI.
+    
+    Supports both stdio and sse transports. For stdio, it will read from stdin and write to stdout.
+    For sse, it will start an HTTP server on the specified host and port.
+    """
+    if transport == "stdio":
+        asyncio.run(mcp.run(transport="stdio"))
+    else:  # sse
+        asyncio.run(mcp.run(transport="sse"))
