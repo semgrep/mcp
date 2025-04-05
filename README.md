@@ -17,7 +17,7 @@
   <a href="https://go.semgrep.dev/slack">
     <img src="https://img.shields.io/badge/slack-3.5k%20members-green?style=flat-square" alt="Join Semgrep community Slack" />
   </a>
-  <a href="https://github.com/semgrep/mcp-server/issues/new/choose">
+  <a href="https://github.com/semgrep/mcp/issues/new/choose">
     <img src="https://img.shields.io/badge/issues-welcome-green?style=flat-square" alt="Issues welcome!" />
   </a>
   <a href="https://x.com/intent/follow?screen_name=semgrep">
@@ -26,11 +26,11 @@
 </p>
 </br>
 
-# [beta] Semgrep MCP Server
+# Semgrep MCP Server
 
-> This mcp server is under active development, we would love your feedback, bug reports, feature requests. For more support, join our [community slack](https://go.semgrep.dev/slack) > `#mcp` channel.
+> This beta Semgrep mcp server is under active development, we would love your feedback, bug reports, feature requests. For more support, join our [community slack](https://go.semgrep.dev/slack) > `#mcp` channel.
 
- [MCP Server](http://pypi.org/p/semgrep-mcp) for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies. 
+ A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies.
 
 ```bash
 uvx semgrep-mcp -t sse
@@ -65,7 +65,7 @@ example Cursor `mcp.json` config:
 > 3. Add it to your environment variables
 >    - CLI (`export SEMGREP_APP_TOKEN=<token>`)
 >    - Docker (`docker run -e SEMGREP_APP_TOKEN=<token>`)
->    - mcp.json 
+>    - MCP Config JSON 
 >        
 >      ```json
 >      "env": {
