@@ -1,76 +1,50 @@
-#!/usr/bin/env -S uv run --with mcp mcp run -t sse
-# /// script
-# requires-python = ">=3.8"
-# dependencies = [
-#     "mcp-server",
-#     "semgrep",
-#     "fastmcp"
-# ]
-# ///
-from enum import Enum, auto
-from mcp.server.fastmcp import FastMCP, Context
+#!/usr/bin/env python3
+import asyncio
+import click
 import subprocess
 import json
 import os
-import time
 import tempfile
-import uuid
-from pathlib import Path
-from typing import Dict, List, Optional, Any, Tuple, Union
-from time import sleep
-import asyncio
-import click
+import shutil
+from mcp.server.fastmcp import FastMCP
+from mcp.shared.exceptions import McpError
+from mcp.types import (
+    ErrorData,
+    INVALID_PARAMS,
+    INTERNAL_ERROR,
+)
+from typing import Dict, List, Optional, Any
+
 
 # ---------------------------------------------------------------------------------
 # Constants
-DEFAULT_SEMGREP_CONFIG = "auto"
-DEFAULT_TIMEOUT = 300000  # 5 minutes in milliseconds
+# ---------------------------------------------------------------------------------
+
+VERSION = "0.1.5"
+DEFAULT_TIMEOUT = 300 # 5 mins in seconds
+
+# ---------------------------------------------------------------------------------
+# Global Variables
+# ---------------------------------------------------------------------------------
+
+# Global variable to store the semgrep executable path
+semgrep_executable: Optional[str] = None
+_semgrep_lock = asyncio.Lock()
 
 
-class ResultFormat:
-    JSON = "json"
-    SARIF = "sarif"
-    TEXT = "text"
-
-
-DEFAULT_RESULT_FORMAT = ResultFormat.TEXT
-
-# Create an MCP server with SSE support enabled
-# Note: We're not specifying http_routes to let FastMCP use its defaults
-mcp = FastMCP(
-    "Semgrep", 
-    version="1.0.0", 
-    request_timeout=300, 
-)
-
-# Error codes
-class ErrorCode(Enum):
-    """Error codes for MCP protocol
-    https://modelcontextprotocol.io/docs/concepts/architecture#error-handling
-    """
-    ParseError = -32700
-    InvalidRequest = -32600
-    MethodNotFound = -32601
-    InvalidParams = -32602
-    InternalError = -32603
-
-
-class McpError(Exception):
-    """Custom error class for MCP protocol errors"""
-    
-    def __init__(self, code: int, message: str):
-        self.code = code
-        self.message = message
-        super().__init__(self.message)
-
+# ---------------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------------
 
 # Path validation
 def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
     """Validates an absolute path to ensure it's safe to use"""
     if not os.path.isabs(path_to_validate):
         raise McpError(
-            ErrorCode.InvalidParams,
-            f"{param_name} must be an absolute path. Received: {path_to_validate}"
+            ErrorData(
+                code=INVALID_PARAMS,
+                message=f"{param_name} must be an absolute path. Received: {path_to_validate}"
+            )
         )
     
     # Normalize path and ensure no path traversal is possible
@@ -79,17 +53,19 @@ def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
     # Check if normalized path is still absolute
     if not os.path.isabs(normalized_path):
         raise McpError(
-            ErrorCode.InvalidParams,
-            f"{param_name} contains invalid path traversal sequences"
+            ErrorData(
+                code=INVALID_PARAMS,
+                message=f"{param_name} contains invalid path traversal sequences"
+            )
         )
     
     return normalized_path
 
 
-def validate_config(config: str) -> str:
+def validate_config(config: Optional[str] = None) -> Optional[str]:
     """Validates semgrep configuration parameter"""
     # Allow registry references (p/ci, p/security, etc.)
-    if config.startswith("p/") or config == "auto":
+    if config is None or config.startswith("p/") or config == "auto":
         return config
     
     # Otherwise, treat as path and validate
@@ -153,54 +129,47 @@ def find_semgrep_path() -> Optional[str]:
     return None
 
 
-# Global variable to store the semgrep executable path
-semgrep_executable = None
-
-
-def ensure_semgrep_available() -> str:
+async def ensure_semgrep_available() -> str:
     """
-    Ensures semgrep is available and sets the global path
-    Returns: Path to semgrep executable
+    Ensures semgrep is available and sets the global path in a thread-safe manner
+    
+    Returns:
+        Path to semgrep executable
+        
+    Raises:
+        McpError: If semgrep is not installed or not found
     """
     global semgrep_executable
     
-    # If we've already found semgrep, return its path
+    # Fast path - check if we already have the path
     if semgrep_executable:
         return semgrep_executable
     
-    # Try to find semgrep
-    semgrep_path = find_semgrep_path()
-    
-    if not semgrep_path:
-        raise McpError(
-            ErrorCode.InternalError,
-            "Semgrep is not installed or not in your PATH. "
-            "Please install Semgrep manually before using this tool. "
-            "Installation options: "
-            "pip install semgrep, "
-            "macOS: brew install semgrep, "
-            "Or refer to https://semgrep.dev/docs/getting-started/"
-        )
-    
-    # Store the path for future use
-    semgrep_executable = semgrep_path
-    return semgrep_path
-
-
-# New progress notification function
-async def report_progress(ctx: Context, task_id: str):
-    """Reports ongoing progress for a running task"""
-    counter = 0
-    while True:
-        await asyncio.sleep(2)  # Wait 2 seconds between notifications
-        counter += 2
-        ctx.set_notification(f"Task {task_id} still running... ({counter}s elapsed)")
-
-
-# Store scan results and status in memory
-scan_results = {}
-scan_status = {}
-temp_dirs = {}  # Store temporary directories for each scan
+    # Slow path - acquire lock and check again
+    async with _semgrep_lock:
+        # Double-check pattern
+        if semgrep_executable:
+            return semgrep_executable
+            
+        # Try to find semgrep
+        semgrep_path = find_semgrep_path()
+        
+        if not semgrep_path:
+            raise McpError(
+                ErrorData(
+                    code=INTERNAL_ERROR,
+                    message="Semgrep is not installed or not in your PATH. "
+                    "Please install Semgrep manually before using this tool. "
+                    "Installation options: "
+                    "pip install semgrep, "
+                    "macOS: brew install semgrep, "
+                    "Or refer to https://semgrep.dev/docs/getting-started/"
+                )
+            )
+        
+        # Store the path for future use
+        semgrep_executable = semgrep_path
+        return semgrep_path
 
 # Utility functions for handling code content
 async def create_temp_files_from_code_content(code_files: List[Dict[str, str]]) -> str:
@@ -212,219 +181,52 @@ async def create_temp_files_from_code_content(code_files: List[Dict[str, str]]) 
         
     Returns:
         Path to temporary directory containing the files
-    """
-    # Create a temporary directory
-    temp_dir = tempfile.mkdtemp(prefix="semgrep_scan_")
-    
-    # Create files in the temporary directory
-    for file_info in code_files:
-        filename = file_info.get("filename")
-        content = file_info.get("content", "")
         
-        if not filename:
-            continue
-        
-        # Create subdirectories if needed
-        file_path = os.path.join(temp_dir, filename)
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        
-        # Write content to file
-        with open(file_path, "w") as f:
-            f.write(content)
-    
-    return temp_dir
-
-async def cleanup_temp_dir(scan_id: str):
-    """
-    Cleans up temporary directory for a scan
-    
-    Args:
-        scan_id: Identifier for the scan
-    """
-    if scan_id in temp_dirs:
-        temp_dir = temp_dirs[scan_id]
-        try:
-            # Remove temporary directory and all its contents
-            import shutil
-            shutil.rmtree(temp_dir, ignore_errors=True)
-            del temp_dirs[scan_id]
-        except Exception as e:
-            print(f"Error cleaning up temporary directory: {str(e)}")
-
-@mcp.tool()
-async def start_scan_from_content(ctx: Context, code_files: List[Dict[str, str]], config: str = DEFAULT_SEMGREP_CONFIG) -> Dict[str, Any]:
-    """
-    Starts a Semgrep scan with code content provided directly
-    
-    Args:
-        ctx: MCP context for sending notifications
-        code_files: List of dictionaries with 'filename' and 'content' keys
-        config: Optional Semgrep configuration (e.g. "auto" or absolute path to rule file)
-        
-    Returns:
-        Dictionary with scan information
-    """
-    # Validate config
-    config = validate_config(config) if not config.startswith("p/") and config != "auto" else config
-    
-    # Validate code_files
-    if not code_files or not isinstance(code_files, list):
-        raise McpError(
-            ErrorCode.InvalidParams,
-            "code_files must be a non-empty list of file objects"
-        )
-    
-    for file_info in code_files:
-        if not isinstance(file_info, dict) or "filename" not in file_info or "content" not in file_info:
-            raise McpError(
-                ErrorCode.InvalidParams,
-                "Each file object must have 'filename' and 'content' keys"
-            )
-    
-    # Generate a unique scan ID
-    scan_id = f"scan-{int(time.time())}-{uuid.uuid4().hex[:8]}"
-    
-    # Initialize scan status
-    scan_status[scan_id] = {
-        "status": "started",
-        "progress": 0,
-        "start_time": time.time()
-    }
-    
-    # Start scan in background with progress reporting
-    asyncio.create_task(run_background_scan_with_content(ctx, scan_id, code_files, config))
-    
-    # Return scan information
-    return {
-        "status": "started",
-        "scan_id": scan_id,
-        "message": f"Scan started with ID: {scan_id}. Progress will be reported via notifications."
-    }
-
-async def run_background_scan_with_content(ctx: Context, scan_id: str, code_files: List[Dict[str, str]], config: str) -> None:
-    """
-    Runs a scan in the background with code content and updates scan status with progress notifications
-    
-    Args:
-        ctx: MCP context for sending notifications
-        scan_id: Unique identifier for the scan
-        code_files: List of dictionaries with 'filename' and 'content' keys
-        config: Optional Semgrep configuration (e.g. "auto" or absolute path to rule file)
+    Raises:
+        McpError: If there are issues creating or writing to files
     """
     try:
-        # Initial notification
-        ctx.set_notification(f"Starting scan {scan_id}...")
+        # Create a temporary directory
+        temp_dir = tempfile.mkdtemp(prefix="semgrep_scan_")
         
-        # Update status
-        scan_status[scan_id]["status"] = "in_progress"
-        
-        # Create temporary files from code content
-        temp_dir = await create_temp_files_from_code_content(code_files)
-        temp_dirs[scan_id] = temp_dir
-        
-
-        args = get_semgrep_args(temp_dir, config)
-        
-        # Execute semgrep command
-        process = await asyncio.create_subprocess_exec(
-            *args,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        
-        # Start progress reporting
-        progress_task = asyncio.create_task(report_scan_progress(ctx, scan_id))
-        
-        # Wait for process to complete
-        stdout, stderr = await process.communicate()
-        
-        # Cancel progress reporting
-        progress_task.cancel()
-        
-        # Parse results
-        if process.returncode == 0 or stdout:
+        # Create files in the temporary directory
+        for file_info in code_files:
+            filename = file_info.get("filename")
+            content = file_info.get("content", "")
+            
+            if not filename:
+                continue
+            
             try:
-                results = json.loads(stdout.decode())
+                # Create subdirectories if needed
+                file_path = os.path.join(temp_dir, filename)
+                os.makedirs(os.path.dirname(file_path), exist_ok=True)
                 
-                # Update file paths in results to use original filenames instead of temp paths
-                if "results" in results:
-                    for finding in results["results"]:
-                        if "path" in finding:
-                            # Extract the relative path from the temp directory
-                            rel_path = os.path.relpath(finding["path"], temp_dir)
-                            finding["path"] = rel_path
-                
-                scan_results[scan_id] = results
-                
-                # Count findings by severity
-                findings = results.get("results", [])
-                severity_counts = {}
-                for finding in findings:
-                    severity = finding.get("extra", {}).get("severity", "unknown")
-                    severity_counts[severity] = severity_counts.get(severity, 0) + 1
-                
-                # Update status
-                scan_status[scan_id] = {
-                    "status": "completed",
-                    "progress": 100,
-                    "end_time": time.time(),
-                    "total_findings": len(findings),
-                    "by_severity": severity_counts
-                }
-                
-                # Final notification
-                ctx.set_notification(
-                    f"Scan {scan_id} completed with {len(findings)} findings: " +
-                    ", ".join([f"{count} {sev}" for sev, count in severity_counts.items()])
+                # Write content to file
+                with open(file_path, "w") as f:
+                    f.write(content)
+            except (OSError, IOError) as e:
+                raise McpError(
+                    ErrorData(
+                        code=INTERNAL_ERROR,
+                        message=f"Failed to create or write to file {filename}: {str(e)}"
+                    )
                 )
-            except json.JSONDecodeError as e:
-                scan_status[scan_id] = {
-                    "status": "error",
-                    "error": f"Error parsing semgrep output: {str(e)}"
-                }
-                ctx.set_notification(f"Scan {scan_id} failed: Error parsing semgrep output")
-        else:
-            scan_status[scan_id] = {
-                "status": "error",
-                "error": stderr.decode()
-            }
-            ctx.set_notification(f"Scan {scan_id} failed: {stderr.decode()[:100]}...")
         
-        # Clean up temporary files
-        await cleanup_temp_dir(scan_id)
-        
+        return temp_dir
     except Exception as e:
-        scan_status[scan_id] = {
-            "status": "error",
-            "error": str(e)
-        }
-        ctx.set_notification(f"Scan {scan_id} failed: {str(e)}")
-        
-        # Clean up temporary files
-        await cleanup_temp_dir(scan_id)
+        if 'temp_dir' in locals():
+            # Clean up temp directory if creation failed
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        raise McpError(
+            ErrorData(
+                code=INTERNAL_ERROR,
+                message=f"Failed to create temporary files: {str(e)}"
+            )
+        )
 
-async def report_scan_progress(ctx: Context, scan_id: str):
-    """Reports progress for a running scan"""
-    progress = 0
-    try:
-        while progress < 100:
-            await asyncio.sleep(2)  # Wait between progress updates
-            
-            # Simulate progress TODO tie to actual progress
-            progress += 5
-            if progress > 95:
-                progress = 95  # Cap at 95% until complete
-                
-            # Update status
-            scan_status[scan_id]["progress"] = progress
-            
-            # Send notification
-            ctx.set_notification(f"Scan {scan_id} in progress: {progress}% complete")
-    except asyncio.CancelledError:
-        # Task was cancelled, which is expected when scan completes
-        pass
 
-def get_semgrep_args(temp_dir: str, config: Optional[str] = None) -> List[str]:
+def get_semgrep_scan_args(temp_dir: str, config: Optional[str] = None) -> List[str]:
     """
     Builds command arguments for semgrep scan
     
@@ -435,72 +237,110 @@ def get_semgrep_args(temp_dir: str, config: Optional[str] = None) -> List[str]:
     Returns:
         List of command arguments
     """
-     # Ensure semgrep is available
-    semgrep_path = ensure_semgrep_available()
 
     # Build command arguments and just run semgrep scan 
     # if no config is provided to allow for either the default "auto" 
     # or whatever the logged in config is
-    args = [semgrep_path, "scan", "--json"]
+    args = ["scan", "--json", "--experimental"] # avoid the extra exec
     if config:
         args.extend(["--config", config])
     args.append(temp_dir)
     return args
 
-
-
-@mcp.tool()
-async def get_scan_status(scan_id: str) -> Dict[str, Any]:
+def validate_code_files(code_files: List[Dict[str, str]]) -> None:
     """
-    Gets the current status of a scan
+    Validates the code_files parameter for semgrep scan
     
     Args:
-        scan_id: Identifier for the scan
+        code_files: List of dictionaries with 'filename' and 'content' keys
         
-    Returns:
-        Dictionary with scan status information
+    Raises:
+        McpError: If validation fails
     """
-    if scan_id not in scan_status:
+    if not code_files or not isinstance(code_files, list):
         raise McpError(
-            ErrorCode.InvalidParams,
-            f"No scan found with ID: {scan_id}"
+            ErrorData(
+                code=INVALID_PARAMS,
+                message="code_files must be a non-empty list of file objects"
+            )
         )
     
-    return {
-        "scan_id": scan_id,
-        **scan_status[scan_id]
-    }
+    for file_info in code_files:
+        if not isinstance(file_info, dict) or "filename" not in file_info or "content" not in file_info:
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS,
+                    message="Each file object must have 'filename' and 'content' keys"
+                )
+            )
+        
 
-@mcp.tool()
-async def get_scan_results(scan_id: str) -> Dict[str, Any]:
+async def run_semgrep(args: List[str]) -> str:
     """
-    Gets the results of a completed scan
+    Runs semgrep with the given arguments
     
     Args:
-        scan_id: Identifier for the scan
+        args: List of command arguments
         
     Returns:
-        Dictionary with scan results
+        Output of semgrep command
     """
-    if scan_id not in scan_status:
+
+    # Ensure semgrep is available
+    semgrep_path = await ensure_semgrep_available()
+
+    # Execute semgrep command
+    process = await asyncio.create_subprocess_exec(
+        semgrep_path,
+        *args,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )   
+    
+    stdout, stderr = await process.communicate()
+    
+    if process.returncode != 0:
         raise McpError(
-            ErrorCode.InvalidParams,
-            f"No scan found with ID: {scan_id}"
+            ErrorData(
+                code=INTERNAL_ERROR,
+                message=f"Error running semgrep: ({process.returncode}) {stderr.decode()}"
+            )   
         )
     
-    if scan_status[scan_id]["status"] != "completed":
-        raise McpError(
-            ErrorCode.InvalidParams,
-            f"Scan {scan_id} is not completed. Current status: {scan_status[scan_id]['status']}"
-        )
+    return stdout.decode()
+
+def remove_temp_dir_from_results(results: Dict[str, Any], temp_dir: str) -> None:
+    """
+    Clean the results from semgrep by converting temporary file paths back to original relative paths
     
-    if scan_id not in scan_results:
-        raise McpError(
-            ErrorCode.InternalError,
-            f"Results not found for scan {scan_id}"
-        )
-    
-    return scan_results[scan_id]
+    Args:
+        results: Dictionary containing semgrep results
+        temp_dir: Path to temporary directory used for scanning
+    """
+    if "results" in results:
+        for finding in results["results"]:
+            if "path" in finding:
+                rel_path = os.path.relpath(finding["path"], temp_dir)
+                finding["path"] = rel_path
+    if "paths" in results:
+        if "scanned" in results["paths"]:
+            scanned_paths = [os.path.relpath(path, temp_dir) for path in results["paths"]["scanned"]]
+            results["paths"]["scanned"] = scanned_paths
+        if "skipped" in results["paths"]:
+            skipped_paths = [os.path.relpath(path, temp_dir) for path in results["paths"]["skipped"]]
+            results["paths"]["skipped"] = skipped_paths
+
+# ---------------------------------------------------------------------------------
+# MCP Server
+# ---------------------------------------------------------------------------------
+
+# Create a fast MCP server
+mcp = FastMCP(
+    "Semgrep", 
+    version=VERSION, 
+    request_timeout=DEFAULT_TIMEOUT, 
+)
+
 
 @mcp.tool()
 async def get_supported_languages() -> List[str]:
@@ -510,257 +350,74 @@ async def get_supported_languages() -> List[str]:
     Returns:
         List of supported languages
     """
-    try:
-        # Ensure semgrep is available
-        semgrep_path = ensure_semgrep_available()
+    
+    args = ["show", "supported-languages", "--experimental"]
 
-        args = [semgrep_path, "show", "supported-languages"]
-        
-        # Execute semgrep command to get supported languages
-        process = await asyncio.create_subprocess_exec(
-            *args,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        
-        stdout, stderr = await process.communicate()
-        
-        if process.returncode != 0:
-            raise McpError(
-                ErrorCode.InternalError,
-                f"Error getting supported languages: {stderr.decode()}"
-            )
-            
-        # Parse output and return list of languages
-        languages = stdout.decode().strip().split('\n')
-        return [lang.strip() for lang in languages if lang.strip()]
-        
-    except Exception as e:
-        if isinstance(e, McpError):
-            raise e
-        raise McpError(
-            ErrorCode.InternalError, 
-            f"Error getting supported languages: {str(e)}"
-        )
+    # Parse output and return list of languages
+    languages = await run_semgrep(args)
+    return [lang.strip() for lang in languages.strip().split('\n') if lang.strip()]
 
 @mcp.tool()
-async def semgrep_scan(code_files: List[Dict[str, str]], config: str = DEFAULT_SEMGREP_CONFIG) -> Dict[str, Any]:
+async def semgrep_scan(code_files: List[Dict[str, str]], config: Optional[str] = None) -> Dict[str, Any]:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
     
     Args:
         code_files: List of dictionaries with 'filename' and 'content' keys
-        config: Optional Semgrep configuration (e.g. "auto" or absolute path to rule file)
+        config: Optional Semgrep configuration (e.g. "auto")
         
     Returns:
         Dictionary with scan results in Semgrep JSON format
     """
     # Validate config
-    config = validate_config(config) if not config.startswith("p/") and config != "auto" else config
+    config = validate_config(config)
     
     # Validate code_files
-    if not code_files or not isinstance(code_files, list):
-        raise McpError(
-            ErrorCode.InvalidParams,
-            "code_files must be a non-empty list of file objects"
-        )
-    
-    for file_info in code_files:
-        if not isinstance(file_info, dict) or "filename" not in file_info or "content" not in file_info:
-            raise McpError(
-                ErrorCode.InvalidParams,
-                "Each file object must have 'filename' and 'content' keys"
-            )
-    
+    validate_code_files(code_files)
+
     try:
         # Create temporary files from code content
         temp_dir = await create_temp_files_from_code_content(code_files)
-
-        args = get_semgrep_args(temp_dir, config)
-        
-        # Execute semgrep command
-        process = await asyncio.create_subprocess_exec(
-            *args,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        
-        stdout, stderr = await process.communicate()
-        
-        # Clean up temporary files
-        import shutil
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        
-        if process.returncode != 0 and not stdout:
+        args = get_semgrep_scan_args(temp_dir, config)
+        output = await run_semgrep(args)
+        results = json.loads(output)
+        remove_temp_dir_from_results(results, temp_dir)
+        return results
+    
+    except McpError as e:
+        raise e
+    except json.JSONDecodeError as e:
             raise McpError(
-                ErrorCode.InternalError,
-                f"Error running semgrep scan: {stderr.decode()}"
+                ErrorData(
+                    code=INTERNAL_ERROR,
+                    message=f"Error parsing semgrep output: {str(e)}"
             )
-            
-        # Parse JSON output and update file paths
-        try:
-            results = json.loads(stdout.decode())
-            
-            # Update file paths in results to use original filenames instead of temp paths
-            if "results" in results:
-                for finding in results["results"]:
-                    if "path" in finding:
-                        # Extract the relative path from the temp directory
-                        rel_path = os.path.relpath(finding["path"], temp_dir)
-                        finding["path"] = rel_path
-            
-            return results
-        except json.JSONDecodeError as e:
-            raise McpError(
-                ErrorCode.InternalError,
-                f"Error parsing semgrep output: {str(e)}"
-            )
-        
+        )
     except Exception as e:
-        if isinstance(e, McpError):
-            raise e
         raise McpError(
-            ErrorCode.InternalError, 
-            f"Error running semgrep scan: {str(e)}"
+            ErrorData(
+                code=INTERNAL_ERROR, 
+                message=f"Error running semgrep scan: {str(e)}"
+            )
         )
 
-# Keep the original functions for backward compatibility
-@mcp.tool()
-async def start_scan(ctx: Context, target_path: str, config: str = DEFAULT_SEMGREP_CONFIG) -> Dict[str, Any]:
-    """
-    Starts a Semgrep scan with progress updates via notifications
-    
-    Args:
-        ctx: MCP context for sending notifications
-        target_path: Absolute path to the file or directory to scan
-        config: Semgrep configuration (e.g. "auto" or absolute path to rule file)
-        
-    Returns:
-        Dictionary with scan information
-    """
-    # Validate parameters
-    target_path = validate_absolute_path(target_path, "target_path")
-    config = validate_config(config)
-    
-    # Check if path exists
-    if not os.path.exists(target_path):
-        raise McpError(
-            ErrorCode.InvalidParams,
-            f"The specified path does not exist: {target_path}"
-        )
-    
-    # Generate a unique scan ID
-    scan_id = f"scan-{int(time.time())}"
-    
-    # Initialize scan status
-    scan_status[scan_id] = {
-        "status": "started",
-        "progress": 0,
-        "start_time": time.time()
-    }
-    
-    # Start scan in background with progress reporting
-    asyncio.create_task(run_background_scan_with_progress(ctx, scan_id, target_path, config))
-    
-    # Return scan information
-    return {
-        "status": "started",
-        "scan_id": scan_id,
-        "message": f"Scan started with ID: {scan_id}. Progress will be reported via notifications."
-    }
-
-async def run_background_scan_with_progress(ctx: Context, scan_id: str, target_path: str, config: str) -> None:
-    """
-    Runs a scan in the background and updates scan status with progress notifications
-    
-    Args:
-        ctx: MCP context for sending notifications
-        scan_id: Unique identifier for the scan
-        target_path: Path to scan
-        config: Semgrep configuration
-    """
-    try:
-        # Initial notification
-        ctx.set_notification(f"Starting scan {scan_id}...")
-        
-        # Update status
-        scan_status[scan_id]["status"] = "in_progress"
-        
-        args = get_semgrep_args(target_path, config)
-        
-        # Execute semgrep command
-        process = await asyncio.create_subprocess_exec(
-            *args,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        
-        # Start progress reporting
-        progress_task = asyncio.create_task(report_scan_progress(ctx, scan_id))
-        
-        # Wait for process to complete
-        stdout, stderr = await process.communicate()
-        
-        # Cancel progress reporting
-        progress_task.cancel()
-        
-        # Parse results
-        if process.returncode == 0 or stdout:
-            try:
-                results = json.loads(stdout.decode())
-                scan_results[scan_id] = results
-                
-                # Count findings by severity
-                findings = results.get("results", [])
-                severity_counts = {}
-                for finding in findings:
-                    severity = finding.get("extra", {}).get("severity", "unknown")
-                    severity_counts[severity] = severity_counts.get(severity, 0) + 1
-                
-                # Update status
-                scan_status[scan_id] = {
-                    "status": "completed",
-                    "progress": 100,
-                    "end_time": time.time(),
-                    "total_findings": len(findings),
-                    "by_severity": severity_counts
-                }
-                
-                # Final notification
-                ctx.set_notification(
-                    f"Scan {scan_id} completed with {len(findings)} findings: " +
-                    ", ".join([f"{count} {sev}" for sev, count in severity_counts.items()])
-                )
-            except json.JSONDecodeError as e:
-                scan_status[scan_id] = {
-                    "status": "error",
-                    "error": f"Error parsing semgrep output: {str(e)}"
-                }
-                ctx.set_notification(f"Scan {scan_id} failed: Error parsing semgrep output")
-        else:
-            scan_status[scan_id] = {
-                "status": "error",
-                "error": stderr.decode()
-            }
-            ctx.set_notification(f"Scan {scan_id} failed: {stderr.decode()[:100]}...")
-        
-    except Exception as e:
-        scan_status[scan_id] = {
-            "status": "error",
-            "error": str(e)
-        }
-        ctx.set_notification(f"Scan {scan_id} failed: {str(e)}")
+    finally:
+        if 'temp_dir' in locals():
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @click.command()
+@click.version_option(version=VERSION, prog_name="Semgrep MCP Server")
 @click.option(
     "-t", "--transport",
     type=click.Choice(["stdio", "sse"]),
     default="stdio",
+    envvar="MCP_TRANSPORT",
     help="Transport protocol to use (stdio or sse)"
 )
-def cli(transport: str):
-    """Entry point for the CLI.
+def main(transport: str):
+    """Entry point for the MCP server
     
     Supports both stdio and sse transports. For stdio, it will read from stdin and write to stdout.
     For sse, it will start an HTTP server on the specified host and port.
@@ -769,3 +426,6 @@ def cli(transport: str):
         asyncio.run(mcp.run(transport="stdio"))
     else:  # sse
         asyncio.run(mcp.run(transport="sse"))
+
+if __name__ == "__main__":
+    main()

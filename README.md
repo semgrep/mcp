@@ -77,17 +77,10 @@ example Cursor `mcp.json` config:
 
 **Scanning Code**
 - `semgrep_scan`: Scan code snippets for security vulnerabilities
-- `scan_directory`: Perform Semgrep scan on a directory
 
-**Customization**
-- `list_rules`: List available Semgrep rules with optional language filtering
-- `create_rule`: Create custom Semgrep rules
+**Meta**
+- `supported_languages`: Return the list of langauges Semgrep supports
 
-**Results**
-- `analyze_results`: Analyze scan results including severity counts and top affected files
-- `filter_results`: Filter scan results by severity, rule ID, file path, etc.
-- `export_results`: Export scan results in various formats (JSON, SARIF, text)
-- `compare_results`: Compare two scan results to identify new and fixed issues
 
 ## Usage
 
