@@ -1,21 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "semgrep-mcp"
-version = "0.1.6"
+version = "0.1.7"
 description = "MCP Server for using Semgrep to scan code"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = { text = "MIT" }
 authors = [
     { name = "Seth Jaksik", email = "seth@semgrep.com" },
     { name = "Drew Dennison", email = "drew@semgrep.com" },
 ]
+keywords = ["security", "static-analysis", "code-scanning", "semgrep"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Software Development :: Quality Assurance",
 ]
+
 dependencies = [
     "mcp>=1.6.0",
     "semgrep>=1.117.0",
@@ -25,13 +36,53 @@ dependencies = [
 Homepage = "https://github.com/semgrep/mcp"
 Repository = "https://github.com/semgrep/mcp.git"
 Issues = "https://github.com/semgrep/mcp/issues"
-
-[tool.uv]
-dev-dependencies = ["mcp[cli]>=1.6.0"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+Documentation = "https://github.com/semgrep/mcp#readme"
 
 [project.scripts]
 semgrep-mcp = "semgrep_mcp.server:main"
+
+[tool.uv]
+dev-dependencies = ["mcp[cli]>=1.6.0", "ruff>=0.11.4", "mypy>=1.15.0"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = ["build", "dist"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "B",   # flake8-bugbear
+    "I",   # isort
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "W",   # pycodestyle warnings
+    "C90", # mccabe
+    "RUF", # ruff-specific rules
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["semgrep_mcp"]
+combine-as-imports = true
+split-on-trailing-comma = true
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+ignore_missing_imports = true
+strict_optional = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["semgrep_mcp"]
