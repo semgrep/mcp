@@ -43,4 +43,4 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         python -m pip install twine
-        python -m twine upload --repository-url https://maven.pkg.github.com/${{ github.repository }} -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} dist/*
+        python -m twine upload --repository-url https://pypi.pkg.github.com/${{ github.repository }} -u ${{ github.actor }} -p ${{ secrets.GITHUB_TOKEN }} dist/*
