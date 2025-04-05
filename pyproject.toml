@@ -1,6 +1,6 @@
 [project]
 name = "semgrep-mcp"
-version = "0.1.5"
+version = "0.1.6"
 description = "MCP Server for using Semgrep to scan code"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -21,6 +21,12 @@ dependencies = [
     "semgrep>=1.117.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/semgrep/mcp"
+Repository = "https://github.com/semgrep/mcp.git"
+Issues = "https://github.com/semgrep/mcp/issues"
+
+[tool.uv]
 dev-dependencies = ["mcp[cli]>=1.6.0"]
 
 [build-system]
@@ -28,14 +34,4 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project.scripts]
-semgrep-mcp = "server:main"
-
-
-
-[project.urls]
-Homepage = "https://github.com/semgrep/mcp"
-Repository = "https://github.com/semgrep/mcp.git"
-Issues = "https://github.com/semgrep/mcp/issues"
-
-[tool.hatch.build.targets.wheel]
-packages = ["server.py"]
+semgrep-mcp = "semgrep_mcp.server:main"

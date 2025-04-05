@@ -33,7 +33,7 @@
  A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies.
 
 ```bash
-uvx semgrep-mcp -t sse
+uvx semgrep-mcp --help
 ```
 
 example Cursor `mcp.json` config:
@@ -126,17 +126,17 @@ semgrep-mcp --help
 ##### SSE Mode<a name="sse-mode"></a>
 
 ```bash
-uv run mcp run server.py -t sse
+uv run mcp run ./src/semgrep_mcp/server.py -t sse
 ```
 Or as a script
 ```bash
-chmod +x server.py
-./server.py -t sse
+chmod +x ./src/semgrep_mcp/server.py
+./src/semgrep_mcp/server.py -t sse
 ```
 
 ##### STDIO Mode<a name="stdio-mode"></a>
 ```bash
-uv run mcp run server.py -t stdio
+uv run mcp run ./src/semgrep_mcp/server.py -t stdio
 ```
 
 See the official [python mcp sdk](https://github.com/modelcontextprotocol/python-sdk) for more details and configuration options.
@@ -194,7 +194,7 @@ Add the following JSON block to your User Settings (JSON) file in VS Code. You c
     "servers": {
       "semgrep": {
         "command": "uv",
-        "args": ["run", "mcp", "run", "server.py", "-t", "sse"]
+        "args": ["run", "mcp", "run", "src", "semgrep_mcp", "server.py"]
       }
     }
   }
@@ -208,7 +208,7 @@ Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace
   "servers": {
     "semgrep": {
       "command": "uv",
-        "args": ["run", "mcp", "run", "server.py", "-t", "sse"]
+        "args": ["run", "mcp", "run", "src", "semgrep_mcp", "server.py"]
     }
   }
 }

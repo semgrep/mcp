@@ -20,15 +20,23 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Installing separately from its dependencies allows optimal layer caching
 ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-dev --no-editable
+    uv pip install .
 
 FROM python:3.13-slim-bookworm
 
 WORKDIR /app
- 
+
+# Create non-root user
+RUN useradd -m app
+
 COPY --from=uv --chown=app:app /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1
 
-ENTRYPOINT ["semgrep-mcp", "-t", "sse"]
+# Switch to non-root user
+USER app
+
+ENTRYPOINT ["semgrep-mcp"]
+CMD ["-t", "sse"]
