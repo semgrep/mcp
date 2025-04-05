@@ -427,9 +427,9 @@ def main(transport: str) -> None:
     For sse, it will start an HTTP server on the specified host and port.
     """
     if transport == "stdio":
-        asyncio.run(mcp.run(transport="stdio"))
+        mcp.run(transport="stdio")
     else:  # sse
-        asyncio.run(mcp.run(transport="sse"))
+        mcp.run(transport="sse")
 
 if __name__ == "__main__":
     main()

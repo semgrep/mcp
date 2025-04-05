@@ -85,4 +85,4 @@ warn_no_return = true
 warn_unreachable = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["semgrep_mcp"]
+packages = ["src/semgrep_mcp"]
