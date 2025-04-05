@@ -1,4 +1,4 @@
-name: Publish to GitHub Package Registry
+name: Publish Python Package
 
 on:
   workflow_dispatch:
