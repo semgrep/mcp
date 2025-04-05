@@ -743,7 +743,7 @@ async def run_background_scan_with_progress(ctx: Context, scan_id: str, target_p
     default="stdio",
     help="Transport protocol to use (stdio or sse)"
 )
-def cli(transport: str, host: str, port: int):
+def cli(transport: str):
     """Entry point for the CLI.
     
     Supports both stdio and sse transports. For stdio, it will read from stdin and write to stdout.
