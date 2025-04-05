@@ -3,7 +3,7 @@
     <picture>
       <source media="(prefers-color-scheme: light)" srcset="images/semgrep-logo-light.svg">
       <source media="(prefers-color-scheme: dark)" srcset="images/semgrep-logo-dark.svg">
-      <img src="https://raw.githubusercontent.com/semgrep/mcp-server/main/images/semgrep-logo-light.svg" height="100" alt="Semgrep logo"/>
+      <img src="https://raw.githubusercontent.com/semgrep/mcp/main/images/semgrep-logo-light.svg" height="100" alt="Semgrep logo"/>
     </picture>
   </a>
 </p>
