@@ -1,26 +1,34 @@
-# Base image with Python and uv
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS base
+# Use a Python image with uv pre-installed
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS uv
 
-# Create a non-root user and set proper permissions
-RUN groupadd -r app && useradd --no-log-init -r -g app app \
-    && mkdir -p /home/app/.cache/uv /app \
-    && chown -R app:app /home/app /app
-
-# Switch to non-root user before doing anything
-USER app
-
-# Set working directory
+# Install the project into `/app`
 WORKDIR /app
 
-# Enable bytecode compilation and optimize caching
-ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy PATH="/app/.venv/bin:$PATH"
+# Enable bytecode compilation
+ENV UV_COMPILE_BYTECODE=1
 
-# Copy the entire application source code
-COPY --chown=app:app . .
+# Copy from the cache instead of linking since it's a mounted volume
+ENV UV_LINK_MODE=copy
 
-# Create a virtual environment and install dependencies **as non-root**
-RUN python -m venv /app/.venv \
-    && uv pip install --no-cache .
+# Install the project's dependencies using the lockfile and settings
+RUN --mount=type=cache,target=/root/.cache/uv \
+    --mount=type=bind,source=uv.lock,target=uv.lock \
+    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
+    uv sync --frozen --no-install-project --no-dev --no-editable
 
-# Default command to run the application
-CMD ["uv", "run", "--with", "fastmcp", "fastmcp", "run", "server.py", "-t", "sse"]
+# Then, add the rest of the project source code and install it
+# Installing separately from its dependencies allows optimal layer caching
+ADD . /app
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-dev --no-editable
+
+FROM python:3.13-slim-bookworm
+
+WORKDIR /app
+ 
+COPY --from=uv --chown=app:app /app/.venv /app/.venv
+
+# Place executables in the environment at the front of the path
+ENV PATH="/app/.venv/bin:$PATH"
+
+ENTRYPOINT ["semgrep-mcp", "-t", "sse"]
