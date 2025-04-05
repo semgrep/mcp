@@ -99,7 +99,7 @@ This MCP Server provides a comprehensive interface to Semgrep through the Model 
 
 ### CLI
 
-#### SSE<a name="sse-mode"></a>
+#### SSE Mode<a name="sse-mode"></a>
 Run by invoking uv directly
 ```bash
 uv run mcp run server.py -t sse
@@ -110,7 +110,7 @@ chmod +x server.py
 ./server.py
 ```
 
-#### stdio
+#### STDIO Mode<a name="stdio-mode"></a>
 ```bash
 uv run mcp run server.py -t stdio
 ```
