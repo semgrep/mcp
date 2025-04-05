@@ -12,13 +12,9 @@ from mcp.server.fastmcp import FastMCP, Context
 import subprocess
 import json
 import os
-import re
-import sys
-import shlex
 import time
 import tempfile
 import uuid
-import argparse
 from pathlib import Path
 from typing import Dict, List, Optional, Any, Tuple, Union
 from time import sleep
@@ -737,3 +733,7 @@ async def run_background_scan_with_progress(ctx: Context, scan_id: str, target_p
             "error": str(e)
         }
         ctx.set_notification(f"Scan {scan_id} failed: {str(e)}")
+
+def cli():
+    """Entry point for the CLI."""
+    asyncio.run(mcp.run())

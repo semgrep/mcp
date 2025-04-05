@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.13"
 
 [[package]]
@@ -677,8 +676,8 @@ wheels = [
 
 [[package]]
 name = "semgrep-mcp"
-version = "0.1.0"
-source = { virtual = "." }
+version = "0.1.1"
+source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "mcp", extra = ["cli"] },
