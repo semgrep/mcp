@@ -97,6 +97,16 @@ This MCP Server provides a comprehensive interface to Semgrep through the Model 
 
 ## Manual Usage
 
+> To optionally connect to Semgrep AppSec Platform:
+>
+> 1. [Login](https://semgrep.dev/login/) or sign up.
+> 2. Generate a token from [Settings](https://semgrep.dev/orgs/-/settings/tokens/api) page.
+> 3. Add it to your environment variables.
+>    - CLI (export SEMGREP_APP_TOKEN=<token>)
+>    - Docker (docker run -e SEMGREP_APP_TOKEN=<token>)
+>
+> The `semgrep scan` that this MCP uses will automatically use the API auth token to connect and use the remote configuration and policies. Please reach out to support@semgrep.com if you have any questions or issues.
+
 ### CLI
 
 #### SSE Mode<a name="sse-mode"></a>
