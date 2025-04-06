@@ -32,13 +32,11 @@
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-uv-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22semgrep-mcp%22%5D%7D&quality=insiders)
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-docker-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%20%22-i%22%2C%20%22--rm%22%2C%20%22ghcr.io%2Fsemgrep%2Fmcp%22%2C%20%22-t%22%2C%20%22stdio%22%5D%7D&quality=insiders)
 
-A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies.
+A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies. Secure your [vibe coding](https://www.linkedin.com/posts/daghanaltas_vibecoding-activity-7311434119924588545-EqvZ/) 😅
 
-> This beta project is under active development, we would love your feedback, bug reports, feature requests. For more support, join our [community slack](https://go.semgrep.dev/slack) > `#mcp` channel.
+> This beta project is under active development, we would love your feedback, bug reports, and feature requests. Join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel!
 
-The purpose of this project is to make Semgrep available for any LLM or Agent to get access to the power of a fast, deterministic static analysis tool that can semantically understand many [languages](https://semgrep.dev/docs/supported-languages) with [5K+ rules](https://semgrep.dev/registry). You can also use it to [secure your vibe coding](https://www.linkedin.com/posts/daghanaltas_vibecoding-activity-7311434119924588545-EqvZ/) 😅
-
-[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) is a standardized API for LLMs, agents, and IDEs such as Cursor, VS Code, Windsurf, or any other tool that supports MCP, to get specialized help and context.
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) is a standardized API for LLMs, Agents, and IDEs like Cursor, VS Code, Windsurf, or anything that supports MCP, to get specialized help, context, and harness the power of tools. Semgrep is a fast, deterministic static analysis semantically understands many [languages](https://semgrep.dev/docs/supported-languages) and comes with with over [5,000 rules](https://semgrep.dev/registry). 🛠️
 
 ## Contents
 
@@ -83,7 +81,7 @@ example [`mcp.json`](https://docs.cursor.com/context/model-context-protocol)
 
 ```
 
-You can add an instruction to your [`.cursor/rules`](https://docs.cursor.com/context/rules-for-ai) to use the tools automatically
+Add an instruction to your [`.cursor/rules`](https://docs.cursor.com/context/rules-for-ai) to use automatically
 
 ```text
 Always scan code generated using Semgrep for security vulnerabilities
@@ -91,7 +89,7 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ### Hosted Server
 
-> An experimental server that may break. As the MCP spec includes HTTP Streaming and OAuth, the server will gain new functionality
+> An experimental server that may break. Once the MCP spec gains support for HTTP Streaming and OAuth in the near future, it will gain new functionality.
 
 `mcp.json`
 
@@ -128,7 +126,7 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ## Semgrep AppSec Platform
 
->Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed
+> Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed
 
 To optionally connect to Semgrep AppSec Platform:
 
@@ -146,7 +144,6 @@ To optionally connect to Semgrep AppSec Platform:
        "SEMGREP_APP_TOKEN": "<token>"
      }
      ```
-
 
 ## Usage
 
