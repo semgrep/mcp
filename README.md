@@ -32,7 +32,7 @@
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-uv-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22semgrep-mcp%22%5D%7D&quality=insiders)
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-docker-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%20%22-i%22%2C%20%22--rm%22%2C%20%22ghcr.io%2Fsemgrep%2Fmcp%22%2C%20%22-t%22%2C%20%22stdio%22%5D%7D&quality=insiders)
 
-A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies. Secure your [vibe coding](https://www.linkedin.com/posts/daghanaltas_vibecoding-activity-7311434119924588545-EqvZ/) 😅
+A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies. Secure your [vibe coding](https://www.linkedin.com/posts/daghanaltas_vibecoding-activity-7311434119924588545-EqvZ/)! 😅
 
 > This beta project is under active development, we would love your feedback, bug reports, and feature requests. Join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel!
 
@@ -89,7 +89,7 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ### Hosted Server
 
-> An experimental server that may break. Once the MCP spec gains support for HTTP Streaming and OAuth in the near future, it will gain new functionality.
+> An experimental server that may break. Once the MCP spec gains support for HTTP Streaming and OAuth in the near future, it will gain new functionality.🚀
 
 `mcp.json`
 
@@ -126,7 +126,7 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ## Semgrep AppSec Platform
 
-> Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed
+> Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed. ☎️
 
 To optionally connect to Semgrep AppSec Platform:
 
