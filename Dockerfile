@@ -38,5 +38,7 @@ ENV PATH="/app/.venv/bin:$PATH" \
 # Switch to non-root user
 USER app
 
+EXPOSE 8000
+
 ENTRYPOINT ["semgrep-mcp"]
 CMD ["-t", "sse"]

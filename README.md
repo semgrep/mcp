@@ -3,7 +3,7 @@
     <picture>
       <source media="(prefers-color-scheme: light)" srcset="images/semgrep-logo-light.svg">
       <source media="(prefers-color-scheme: dark)" srcset="images/semgrep-logo-dark.svg">
-      <img src="https://raw.githubusercontent.com/semgrep/mcp/main/images/semgrep-logo-light.svg" height="60" alt="Semgrep logo"/>
+      <img src="https://raw.githubusercontent.com/semgrep/mcp/main/images/semgrep-logo-light.svg" height="40" alt="Semgrep logo"/>
     </picture>
   </a>
 </p>
@@ -45,6 +45,8 @@ The purpose of this project is to make Semgrep available for any LLM or Agent to
   - [Hosted Server](#hosted-server)
 - [Demo](#demo)
 - [Tools](#mcp-tools)
+- [Semgrep AppSec Platform](#semgrep-appsec-platform)
+- [Usage](#usage)
 
 ## Getting started
 
@@ -62,7 +64,7 @@ docker run -i --rm ghcr.io/semgrep/mcp -t stdio
 
 ### Cursor
 
-example [`mcp.json`](https://docs.cursor.com/context/model-context-protocol) config:
+example [`mcp.json`](https://docs.cursor.com/context/model-context-protocol)
 
 ```json
 {
@@ -89,6 +91,8 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 > An experimental server that may break. As the MCP spec includes HTTP Streaming and OAuth, the server will gain new functionality
 
+`mcp.json`
+
 ```json
 {
   "mcpServers": {
@@ -105,25 +109,6 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ## MCP Tools
 
-> To optionally connect to Semgrep AppSec Platform:
->
-> 1. [Login](https://semgrep.dev/login/) or sign up
-> 1. Generate a token from [Settings](https://semgrep.dev/orgs/-/settings/tokens/api) page
-> 1. Add it to your environment variables
->    - CLI (`export SEMGREP_APP_TOKEN=<token>`)
->
->    - Docker (`docker run -e SEMGREP_APP_TOKEN=<token>`)
->
->    - MCP Config JSON
->
->      ```json
->      "env": {
->        "SEMGREP_APP_TOKEN": "<token>"
->      }
->      ```
->
-> Semgrep will automatically use the API token to connect and use the remote configuration. Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if you have any problems.
-
 **Scanning Code**
 
 - `security_check`: Scan code for security vulnerabilities
@@ -139,17 +124,46 @@ Always scan code generated using Semgrep for security vulnerabilities
 - `supported_languages`: Return the list of langauges Semgrep supports
 - `semgrep_rule_schema`: Fetches the latest semgrep rule JSON Schema
 
+## Semgrep AppSec Platform
+
+> Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed
+
+To optionally connect to Semgrep AppSec Platform:
+
+1. [Login](https://semgrep.dev/login/) or sign up
+1. Generate a token from [Settings](https://semgrep.dev/orgs/-/settings/tokens/api) page
+1. Add it to your environment variables
+   - CLI (`export SEMGREP_APP_TOKEN=<token>`)
+
+   - Docker (`docker run -e SEMGREP_APP_TOKEN=<token>`)
+
+   - MCP Config JSON
+
+     ```json
+     "env": {
+       "SEMGREP_APP_TOKEN": "<token>"
+     }
+     ```
+
 ## Usage
 
-This package is published to PyPI as [semgrep-mcp](https://pypi.org/p/semgrep-mcp)
-
-You can install it and run with [pip](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#install-a-package), [pipx](https://pipx.pypa.io/), [uv](https://docs.astral.sh/uv/), [poetry](https://python-poetry.org/), or any other way to install python packages.
-
-For example:
+This package is published to PyPI as [semgrep-mcp](https://pypi.org/p/semgrep-mcp) and can be installed and run with [pip](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#install-a-package), [pipx](https://pipx.pypa.io/), [uv](https://docs.astral.sh/uv/), [poetry](https://python-poetry.org/), or any python packages manager.
 
 ```bash
-pipx install semgrep-mcp
-semgrep-mcp --help
+$ pipx install semgrep-mcp
+$ semgrep-mcp --help
+
+Usage: semgrep-mcp [OPTIONS]
+
+  Entry point for the MCP server
+
+  Supports both stdio and sse transports. For stdio, it will read from stdin
+  and write to stdout. For sse, it will start an HTTP server on port 8000.
+
+Options:
+  --version                    Show the version and exit.
+  -t, --transport [stdio|sse]  Transport protocol to use (stdio or sse)
+  --help                       Show this message and exit.
 ```
 
 ## Run From Source
