@@ -42,7 +42,7 @@ Documentation = "https://github.com/semgrep/mcp#readme"
 semgrep-mcp = "semgrep_mcp.server:main"
 
 [tool.uv]
-dev-dependencies = ["mcp[cli]>=1.6.0", "ruff>=0.11.4", "mypy>=1.15.0"]
+dev-dependencies = ["mcp[cli]>=1.6.0", "ruff>=0.11.4", "mypy>=1.15.0", "pytest>=8.1.1"]
 
 [tool.ruff]
 target-version = "py310"
