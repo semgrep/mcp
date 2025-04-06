@@ -36,6 +36,23 @@ _semgrep_lock = asyncio.Lock()
 # Utilities
 # ---------------------------------------------------------------------------------
 
+def safe_join(base_dir: str, untrusted_path: str) -> str:
+    # Absolute, normalized path to the base directory
+    base_dir = os.path.abspath(base_dir)
+
+    # Join and normalize the untrusted path
+    full_path = os.path.abspath(os.path.join(base_dir, untrusted_path))
+
+    # Ensure the final path is still within the base directory
+    if not full_path.startswith(base_dir + os.sep):
+        raise ValueError(f"Untrusted path escapes the base directory!: {untrusted_path}")
+
+    return full_path
+
+def common_base_dir(file_paths: list[str]) -> str:
+    dirs = [os.path.dirname(p) for p in file_paths]
+    return os.path.commonpath(dirs)
+
 # Path validation
 def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
     """Validates an absolute path to ensure it's safe to use"""
@@ -164,7 +181,7 @@ async def ensure_semgrep_available() -> str:
         return semgrep_path
 
 # Utility functions for handling code content
-async def create_temp_files_from_code_content(code_files: list[dict[str, str]]) -> str:
+def create_temp_files_from_code_content(code_files: list[dict[str, str]]) -> str:
     """
     Creates temporary files from code content
 
@@ -181,6 +198,10 @@ async def create_temp_files_from_code_content(code_files: list[dict[str, str]]) 
         # Create a temporary directory
         temp_dir = tempfile.mkdtemp(prefix="semgrep_scan_")
 
+        # if given a list of files, with absolute paths, find the common base dir
+        paths = [file_info.get("filename", "") for file_info in code_files]
+        base_dir = common_base_dir(paths)
+
         # Create files in the temporary directory
         for file_info in code_files:
             filename = file_info.get("filename")
@@ -189,13 +210,18 @@ async def create_temp_files_from_code_content(code_files: list[dict[str, str]]) 
             if not filename:
                 continue
 
+            if base_dir:
+                relative_path = os.path.relpath(filename, base_dir)
+                temp_file_path = safe_join(temp_dir, relative_path)
+            else:
+                temp_file_path = safe_join(temp_dir, filename)
+
             try:
                 # Create subdirectories if needed
-                file_path = os.path.join(temp_dir, filename)
-                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                os.makedirs(os.path.dirname(temp_file_path), exist_ok=True)
 
                 # Write content to file
-                with open(file_path, "w") as f:
+                with open(temp_file_path, "w") as f:
                     f.write(content)
             except OSError as e:
                 raise McpError(
@@ -368,7 +394,7 @@ async def semgrep_scan(
 
     Args:
         code_files: List of dictionaries with 'filename' and 'content' keys
-        config: Optional Semgrep configuration (e.g. "auto")
+        config: Optional Semgrep configuration string (e.g. "auto", "p/ci", "p/security")
 
     Returns:
         Dictionary with scan results in Semgrep JSON format
@@ -381,7 +407,7 @@ async def semgrep_scan(
 
     try:
         # Create temporary files from code content
-        temp_dir = await create_temp_files_from_code_content(code_files)
+        temp_dir = create_temp_files_from_code_content(code_files)
         args = get_semgrep_scan_args(temp_dir, config)
         output = await run_semgrep(args)
         results: dict[str, Any] = json.loads(output)
