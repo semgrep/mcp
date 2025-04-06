@@ -26,6 +26,8 @@
 
 [![Install in VS Code](https://img.shields.io/badge/VS_Code-uv-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22semgrep-mcp%22%5D%7D)
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-uv-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22semgrep-mcp%22%5D%7D&quality=insiders)
+[![Install in VS Code](https://img.shields.io/badge/VS_Code-docker-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%20%22-i%22%2C%20%22--rm%22%2C%20%22ghcr.io%2Fsemgrep%2Fmcp%22%2C%20%22-t%22%2C%20%22stdio%22%5D%7D)
+[![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-docker-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%20%22-i%22%2C%20%22--rm%22%2C%20%22ghcr.io%2Fsemgrep%2Fmcp%22%2C%20%22-t%22%2C%20%22stdio%22%5D%7D&quality=insiders)
 [![PyPI](https://img.shields.io/pypi/v/semgrep-mcp?style=flat-square&color=blue)](https://pypi.org/project/semgrep-mcp/)
 
 A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies.
@@ -35,7 +37,13 @@ A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security 
 **Getting started**
 
 ```bash
-uvx semgrep-mcp --help
+uvx semgrep-mcp # run with --help to see all the options
+```
+
+or with Docker
+
+```bash
+docker run -i --rm ghcr.io/semgrep/mcp -t stdio 
 ```
 
 example Cursor `mcp.json` config:
@@ -86,6 +94,7 @@ example Cursor `mcp.json` config:
 - `semgrep_scan_with_custom_rule`: Scan code files using a custom Semgrep rule
 
 **Understanding Code**
+
 - `get_abstract_syntax_tree`: Output the Abstract Syntax Tree (AST) of code
 
 **Meta**
