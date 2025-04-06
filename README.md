@@ -79,7 +79,8 @@ example Cursor `mcp.json` config:
 
 **Scanning Code**
 
-- `semgrep_scan`: Scan code snippets for security vulnerabilities
+- `semgrep_scan`: Scan code files for security vulnerabilities
+- `semgrep_scan_with_custom_rule`: Scan code files using a custom Semgrep rule
 
 **Meta**
 
