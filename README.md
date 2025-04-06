@@ -66,7 +66,7 @@ example Cursor `mcp.json` config:
 
 <a href="https://www.loom.com/share/8535d72e4cfc4e1eb1e03ea223a702df"> <img style="max-width:300px;" src="https://cdn.loom.com/sessions/thumbnails/8535d72e4cfc4e1eb1e03ea223a702df-1047fabea7261abb-full-play.gif"> </a>
 
-[Model Context Protocul (MCP)](https://modelcontextprotocol.io/) is like Unix pipes or an API for LLMs, agents, and coding tools like Cursor, VS Code, Windsurf, Claude, or any other tool that support MCP, to get specialized help doing a task by using a tool.
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) is like Unix pipes or an API for LLMs, agents, and coding tools like Cursor, VS Code, Windsurf, Claude, or any other tool that support MCP, to get specialized help doing a task by using a tool.
 
 ## MCP Tools
 
