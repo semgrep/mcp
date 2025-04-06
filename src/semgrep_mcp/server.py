@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field, ValidationError
 # Constants
 # ---------------------------------------------------------------------------------
 
-VERSION = "0.1.9"
+VERSION = "0.1.10"
 DEFAULT_TIMEOUT = 300  # 5 mins in seconds
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
@@ -30,7 +30,7 @@ SEMGREP_API_URL = f"{SEMGREP_URL}/api"
 # Field definitions for function parameters
 CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
 CONFIG_FIELD = Field(
-    description="Optional Semgrep configuration string (e.g. 'auto', 'p/ci', 'p/security')",
+    description="Optional Semgrep configuration string (e.g. 'p/docker', 'p/xss', 'auto')",
     default=None,
 )
 
@@ -50,8 +50,13 @@ _semgrep_lock = asyncio.Lock()
 
 
 class CodeFile(BaseModel):
-    filename: str = Field(description="Relative path to the file")
-    content: str = Field(description="Content of the file")
+    filename: str = Field(description="Relative path to the code file")
+    content: str = Field(description="Content of the code file")
+
+
+class CodeWithLanguage(BaseModel):
+    content: str = Field(description="Content of the code file")
+    language: str = Field(description="Programing language of the code file", default="python")
 
 
 class SemgrepScanResult(BaseModel):
@@ -123,7 +128,7 @@ def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
 def validate_config(config: str | None = None) -> str | None:
     """Validates semgrep configuration parameter"""
     # Allow registry references (p/ci, p/security, etc.)
-    if config is None or config.startswith("p/") or config == "auto":
+    if config is None or config.startswith("p/") or config.startswith("r/") or config == "auto":
         return config
 
     # Otherwise, treat as path and validate
@@ -534,6 +539,105 @@ async def semgrep_scan(
             ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
         ) from e
 
+    finally:
+        if "temp_dir" in locals():
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@mcp.tool()
+async def security_check(
+    code_files: list[CodeFile] = CODE_FILES_FIELD,
+) -> SemgrepScanResult:
+    """
+    Runs a fast security check on code and returns any issues as JSON
+
+    Use this tool when you need to:
+      - scan code for security vulnerabilities
+      - verify that code is secure
+      - double check that code is secure before committing
+      - get a second opinion on code security
+    """
+    # Validate code_files
+    validate_code_files(code_files)
+
+    try:
+        # Create temporary files from code content
+        temp_dir = create_temp_files_from_code_content(code_files)
+        args = get_semgrep_scan_args(temp_dir, "p/security-audit")
+        output = await run_semgrep(args)
+        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+        remove_temp_dir_from_results(results, temp_dir)
+        return results
+
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+        ) from e
+
+    finally:
+        if "temp_dir" in locals():
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@mcp.tool()
+async def get_abstract_syntax_tree(
+    code: str = Field(description="The code to get the AST for"),
+    language: str = Field(description="The programming language of the code"),
+) -> str:
+    """
+    Returns the Abstract Syntax Tree (AST) for the provided code file in JSON format
+
+    Use this tool when you need to:
+      - get the Abstract Syntax Tree (AST) for the provided code file\
+      - get the AST of a file
+      - understand the structure of the code in a more granular way
+      - see what a parser sees in the code
+    """
+
+    try:
+        # Create temporary directory and file for AST generation
+        temp_dir = tempfile.mkdtemp(prefix="semgrep_ast_")
+        temp_file_path = os.path.join(temp_dir, "code.txt")  # safe
+
+        # Write content to file
+        with open(temp_file_path, "w") as f:
+            f.write(code)
+
+        args = [
+            "--experimental",
+            "--dump-ast",
+            "-l",
+            language,
+            "--json",
+            temp_file_path,
+        ]
+        return await run_semgrep(args)
+
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except OSError as e:
+        raise McpError(
+            ErrorData(
+                code=INTERNAL_ERROR,
+                message=f"Failed to create or write to file {temp_file_path}: {e!s}",
+            )
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+        ) from e
     finally:
         if "temp_dir" in locals():
             # Clean up temporary files

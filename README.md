@@ -81,8 +81,12 @@ example Cursor `mcp.json` config:
 
 **Scanning Code**
 
-- `semgrep_scan`: Scan code files for security vulnerabilities
+- `security_check`: Scan code for security vulnerabilities
+- `semgrep_scan`: Scan code files for security vulnerabilities with a given config string
 - `semgrep_scan_with_custom_rule`: Scan code files using a custom Semgrep rule
+
+**Understanding Code**
+- `get_abstract_syntax_tree`: Output the Abstract Syntax Tree (AST) of code
 
 **Meta**
 
