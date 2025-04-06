@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import asyncio
-import json
 import os
 import shutil
 import subprocess
@@ -15,13 +14,24 @@ from mcp.types import (
     INVALID_PARAMS,
     ErrorData,
 )
+from pydantic import BaseModel, Field
+from pydantic.error_wrappers import ValidationError
 
 # ---------------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------------
 
-VERSION = "0.1.7"
-DEFAULT_TIMEOUT = 300 # 5 mins in seconds
+VERSION = "0.1.8"
+DEFAULT_TIMEOUT = 300  # 5 mins in seconds
+
+# Field definitions for function parameters
+CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
+CONFIG_FIELD = Field(
+    description="Optional Semgrep configuration string (e.g. 'auto', 'p/ci', 'p/security')",
+    default=None,
+)
+
+RULE_FIELD = Field(description="Semgrep YAML rule string")
 
 # ---------------------------------------------------------------------------------
 # Global Variables
@@ -31,10 +41,32 @@ DEFAULT_TIMEOUT = 300 # 5 mins in seconds
 semgrep_executable: str | None = None
 _semgrep_lock = asyncio.Lock()
 
+# ---------------------------------------------------------------------------------
+# Data Models
+# ---------------------------------------------------------------------------------
+
+
+class CodeFile(BaseModel):
+    filename: str = Field(description="Relative path to the file")
+    content: str = Field(description="Content of the file")
+
+
+class SemgrepScanResult(BaseModel):
+    version: str = Field(description="Version of Semgrep used for the scan")
+    results: list[dict[str, Any]] = Field(description="List of semgrep scan results")
+    errors: list[dict[str, Any]] = Field(
+        description="List of errors encountered during scan", default_factory=list
+    )
+    paths: dict[str, Any] = Field(description="Paths of the scanned files")
+    skipped_rules: list[str] = Field(
+        description="List of rules that were skipped during scan", default_factory=list
+    )
+
 
 # ---------------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------------
+
 
 def safe_join(base_dir: str, untrusted_path: str) -> str:
     # Absolute, normalized path to the base directory
@@ -49,9 +81,11 @@ def safe_join(base_dir: str, untrusted_path: str) -> str:
 
     return full_path
 
+
 def common_base_dir(file_paths: list[str]) -> str:
     dirs = [os.path.dirname(p) for p in file_paths]
     return os.path.commonpath(dirs)
+
 
 # Path validation
 def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
@@ -60,7 +94,7 @@ def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
-                message=f"{param_name} must be an absolute path. Received: {path_to_validate}"
+                message=f"{param_name} must be an absolute path. Received: {path_to_validate}",
             )
         )
 
@@ -72,7 +106,7 @@ def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
-                message=f"{param_name} contains invalid path traversal sequences"
+                message=f"{param_name} contains invalid path traversal sequences",
             )
         )
 
@@ -110,18 +144,21 @@ def find_semgrep_path() -> str | None:
     if os.name == "nt":
         app_data = os.environ.get("APPDATA", "")
         if app_data:
-            common_paths.extend([
-                os.path.join(app_data, "Python", "Scripts", "semgrep.exe"),
-                os.path.join(app_data, "npm", "semgrep.cmd"),
-            ])
+            common_paths.extend(
+                [
+                    os.path.join(app_data, "Python", "Scripts", "semgrep.exe"),
+                    os.path.join(app_data, "npm", "semgrep.cmd"),
+                ]
+            )
 
     # Try each path
     for semgrep_path in common_paths:
         # For 'semgrep' (without path), check if it's in PATH
         if semgrep_path == "semgrep":
             try:
-                subprocess.run([semgrep_path, "--version"],
-                              check=True, capture_output=True, text=True)
+                subprocess.run(
+                    [semgrep_path, "--version"], check=True, capture_output=True, text=True
+                )
                 return semgrep_path
             except (subprocess.SubprocessError, FileNotFoundError):
                 continue
@@ -133,8 +170,9 @@ def find_semgrep_path() -> str | None:
 
             # Try executing semgrep at this path
             try:
-                subprocess.run([semgrep_path, "--version"],
-                              check=True, capture_output=True, text=True)
+                subprocess.run(
+                    [semgrep_path, "--version"], check=True, capture_output=True, text=True
+                )
                 return semgrep_path
             except (subprocess.SubprocessError, FileNotFoundError):
                 continue
@@ -172,7 +210,7 @@ async def ensure_semgrep_available() -> str:
                     "Installation options: "
                     "pip install semgrep, "
                     "macOS: brew install semgrep, "
-                    "Or refer to https://semgrep.dev/docs/getting-started/"
+                    "Or refer to https://semgrep.dev/docs/getting-started/",
                 )
             )
 
@@ -180,13 +218,14 @@ async def ensure_semgrep_available() -> str:
         semgrep_executable = semgrep_path
         return semgrep_path
 
+
 # Utility functions for handling code content
-def create_temp_files_from_code_content(code_files: list[dict[str, str]]) -> str:
+def create_temp_files_from_code_content(code_files: list[CodeFile]) -> str:
     """
     Creates temporary files from code content
 
     Args:
-        code_files: List of dictionaries with 'filename' and 'content' keys
+        code_files: List of CodeFile objects
 
     Returns:
         Path to temporary directory containing the files
@@ -199,14 +238,12 @@ def create_temp_files_from_code_content(code_files: list[dict[str, str]]) -> str
         temp_dir = tempfile.mkdtemp(prefix="semgrep_scan_")
 
         # if given a list of files, with absolute paths, find the common base dir
-        paths = [file_info.get("filename", "") for file_info in code_files]
+        paths = [file_info.filename for file_info in code_files]
         base_dir = common_base_dir(paths)
 
         # Create files in the temporary directory
         for file_info in code_files:
-            filename = file_info.get("filename")
-            content = file_info.get("content", "")
-
+            filename = file_info.filename
             if not filename:
                 continue
 
@@ -222,25 +259,22 @@ def create_temp_files_from_code_content(code_files: list[dict[str, str]]) -> str
 
                 # Write content to file
                 with open(temp_file_path, "w") as f:
-                    f.write(content)
+                    f.write(file_info.content)
             except OSError as e:
                 raise McpError(
                     ErrorData(
                         code=INTERNAL_ERROR,
-                        message=f"Failed to create or write to file {filename}: {e!s}"
+                        message=f"Failed to create or write to file {filename}: {e!s}",
                     )
                 ) from e
 
         return temp_dir
     except Exception as e:
-        if 'temp_dir' in locals():
+        if "temp_dir" in locals():
             # Clean up temp directory if creation failed
             shutil.rmtree(temp_dir, ignore_errors=True)
         raise McpError(
-            ErrorData(
-                code=INTERNAL_ERROR,
-                message=f"Failed to create temporary files: {e!s}"
-            )
+            ErrorData(code=INTERNAL_ERROR, message=f"Failed to create temporary files: {e!s}")
         ) from e
 
 
@@ -259,40 +293,36 @@ def get_semgrep_scan_args(temp_dir: str, config: str | None = None) -> list[str]
     # Build command arguments and just run semgrep scan
     # if no config is provided to allow for either the default "auto"
     # or whatever the logged in config is
-    args = ["scan", "--json", "--experimental"] # avoid the extra exec
+    args = ["scan", "--json", "--experimental"]  # avoid the extra exec
     if config:
         args.extend(["--config", config])
     args.append(temp_dir)
     return args
 
-def validate_code_files(code_files: list[dict[str, str]]) -> None:
+
+def validate_code_files(code_files: list[CodeFile]) -> None:
     """
-    Validates the code_files parameter for semgrep scan
+    Validates the code_files parameter for semgrep scan using Pydantic validation
 
     Args:
-        code_files: List of dictionaries with 'filename' and 'content' keys
+        code_files: List of CodeFile objects
 
     Raises:
         McpError: If validation fails
     """
-    if not code_files or not isinstance(code_files, list):
+    if not code_files:
         raise McpError(
             ErrorData(
-                code=INVALID_PARAMS,
-                message="code_files must be a non-empty list of file objects"
+                code=INVALID_PARAMS, message="code_files must be a non-empty list of file objects"
             )
         )
-
-    for file_info in code_files:
-        if (not isinstance(file_info, dict) or
-            "filename" not in file_info or
-            "content" not in file_info):
-            raise McpError(
-                ErrorData(
-                    code=INVALID_PARAMS,
-                    message="Each file object must have 'filename' and 'content' keys"
-                )
-            )
+    try:
+        # Pydantic will automatically validate each item in the list
+        [CodeFile.model_validate(file) for file in code_files]
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
+        ) from e
 
 
 async def run_semgrep(args: list[str]) -> str:
@@ -311,10 +341,7 @@ async def run_semgrep(args: list[str]) -> str:
 
     # Execute semgrep command
     process = await asyncio.create_subprocess_exec(
-        semgrep_path,
-        *args,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
+        semgrep_path, *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
 
     stdout, stderr = await process.communicate()
@@ -323,39 +350,42 @@ async def run_semgrep(args: list[str]) -> str:
         raise McpError(
             ErrorData(
                 code=INTERNAL_ERROR,
-                message=f"Error running semgrep: ({process.returncode}) {stderr.decode()}"
+                message=f"Error running semgrep: ({process.returncode}) {stderr.decode()}",
             )
         )
 
     return stdout.decode()
 
-def remove_temp_dir_from_results(results: dict[str, Any], temp_dir: str) -> None:
+
+def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> None:
     """
     Clean the results from semgrep by converting temporary file paths back to
     original relative paths
 
     Args:
-        results: Dictionary containing semgrep results
+        results: SemgrepScanResult object containing semgrep results
         temp_dir: Path to temporary directory used for scanning
     """
-    if "results" in results:
-        for finding in results["results"]:
-            if "path" in finding:
-                rel_path = os.path.relpath(finding["path"], temp_dir)
-                finding["path"] = rel_path
-    if "paths" in results:
-        if "scanned" in results["paths"]:
-            scanned_paths = [
-                os.path.relpath(path, temp_dir)
-                for path in results["paths"]["scanned"]
-            ]
-            results["paths"]["scanned"] = scanned_paths
-        if "skipped" in results["paths"]:
-            skipped_paths = [
-                os.path.relpath(path, temp_dir)
-                for path in results["paths"]["skipped"]
-            ]
-            results["paths"]["skipped"] = skipped_paths
+    # Process findings results
+    for finding in results.results:
+        if "path" in finding:
+            try:
+                finding["path"] = os.path.relpath(finding["path"], temp_dir)
+            except ValueError:
+                # Skip if path is not relative to temp_dir
+                continue
+
+    # Process scanned paths
+    if "scanned" in results.paths:
+        results.paths["scanned"] = [
+            os.path.relpath(path, temp_dir) for path in results.paths["scanned"]
+        ]
+
+    if "skipped" in results.paths:
+        results.paths["skipped"] = [
+            os.path.relpath(path, temp_dir) for path in results.paths["skipped"]
+        ]
+
 
 # ---------------------------------------------------------------------------------
 # MCP Server
@@ -382,13 +412,64 @@ async def get_supported_languages() -> list[str]:
 
     # Parse output and return list of languages
     languages = await run_semgrep(args)
-    return [lang.strip() for lang in languages.strip().split('\n') if lang.strip()]
+    return [lang.strip() for lang in languages.strip().split("\n") if lang.strip()]
+
+
+@mcp.tool()
+async def semgrep_scan_with_custom_rule(
+    code_files: list[CodeFile] = CODE_FILES_FIELD,
+    rule: str = RULE_FIELD,
+) -> SemgrepScanResult:
+    """
+    Runs a Semgrep scan with a custom rule on provided code content
+    and returns the findings in JSON format
+
+    Args:
+        code_files: List of dictionaries with 'filename' and 'content' keys
+        rule: Semgrep YAML rule string
+
+    Returns:
+        Dictionary with scan results in Semgrep JSON format
+    """
+    # Validate code_files
+    validate_code_files(code_files)
+    try:
+        # Create temporary files from code content
+        temp_dir = create_temp_files_from_code_content(code_files)
+        # Write rule to file
+        rule_file_path = os.path.join(temp_dir, "rule.yaml")
+        with open(rule_file_path, "w") as f:
+            f.write(rule)
+
+        # Run semgrep scan with custom rule
+        args = get_semgrep_scan_args(temp_dir, rule_file_path)
+        output = await run_semgrep(args)
+        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+        remove_temp_dir_from_results(results, temp_dir)
+        return results
+
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+        ) from e
+
+    finally:
+        if "temp_dir" in locals():
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
 
 @mcp.tool()
 async def semgrep_scan(
-    code_files: list[dict[str, str]],
-    config: str | None = None
-) -> dict[str, Any]:
+    code_files: list[CodeFile] = CODE_FILES_FIELD,
+    config: str | None = CONFIG_FIELD,
+) -> SemgrepScanResult:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
 
@@ -410,29 +491,23 @@ async def semgrep_scan(
         temp_dir = create_temp_files_from_code_content(code_files)
         args = get_semgrep_scan_args(temp_dir, config)
         output = await run_semgrep(args)
-        results: dict[str, Any] = json.loads(output)
+        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
         return results
 
     except McpError as e:
         raise e
-    except json.JSONDecodeError as e:
+    except ValidationError as e:
         raise McpError(
-            ErrorData(
-                code=INTERNAL_ERROR,
-                message=f"Error parsing semgrep output: {e!s}"
-            )
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
         ) from e
     except Exception as e:
         raise McpError(
-            ErrorData(
-                code=INTERNAL_ERROR,
-                message=f"Error running semgrep scan: {e!s}"
-            )
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
         ) from e
 
     finally:
-        if 'temp_dir' in locals():
+        if "temp_dir" in locals():
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -440,11 +515,12 @@ async def semgrep_scan(
 @click.command()
 @click.version_option(version=VERSION, prog_name="Semgrep MCP Server")
 @click.option(
-    "-t", "--transport",
+    "-t",
+    "--transport",
     type=click.Choice(["stdio", "sse"]),
     default="stdio",
     envvar="MCP_TRANSPORT",
-    help="Transport protocol to use (stdio or sse)"
+    help="Transport protocol to use (stdio or sse)",
 )
 def main(transport: str) -> None:
     """Entry point for the MCP server
@@ -456,6 +532,7 @@ def main(transport: str) -> None:
         mcp.run(transport="stdio")
     else:  # sse
         mcp.run(transport="sse")
+
 
 if __name__ == "__main__":
     main()
