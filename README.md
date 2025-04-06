@@ -32,6 +32,8 @@ A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security 
 
 > This beta Semgrep mcp server is under active development, we would love your feedback, bug reports, feature requests. For more support, join our [community slack](https://go.semgrep.dev/slack) > `#mcp` channel.
 
+**Getting started**
+
 ```bash
 uvx semgrep-mcp --help
 ```
