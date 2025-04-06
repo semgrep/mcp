@@ -32,11 +32,13 @@ jobs:
 
     - name: Run tests with pytest
       run: |
-        pytest tests/ --cov=src/ --cov-report=xml --cov-report=term-missing
-
-    - name: Upload coverage artifacts
+        pytest tests/ --doctest-modules --junitxml=junit/test-results-${{ matrix.python-version }}.xml
+    
+    - name: Upload pytest test results
+      # Use always() to always run this step to publish test results when there are test failures
+      if: ${{ always() }}
       uses: actions/upload-artifact@v4
       with:
-        name: coverage-report-${{ matrix.python-version }}
-        path: coverage.xml
-        retention-days: 7 
+        name: pytest-results-${{ matrix.python-version }}
+        path: junit/test-results-${{ matrix.python-version }}.xml
+        retention-days: 7
