@@ -34,13 +34,15 @@ A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security 
 
 > This beta project is under active development, we would love your feedback, bug reports, feature requests. For more support, join our [community slack](https://go.semgrep.dev/slack) > `#mcp` channel.
 
-**Getting started**
+## Getting started
+
+As a [python package](https://pypi.org/p/semgrep-mcp) to install and run via pip, uv, etc. Defaults to running as a command ([stdio mode](https://modelcontextprotocol.io/docs/concepts/transports#built-in-transport-types))
 
 ```bash
 uvx semgrep-mcp # run with --help to see all the options
 ```
 
-or with Docker
+or with as a [docker container](https://ghcr.io/semgrep/mcp). Defaults to running as a server ([SSE mode](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse))
 
 ```bash
 docker run -i --rm ghcr.io/semgrep/mcp -t stdio 
