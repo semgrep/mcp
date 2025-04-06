@@ -85,6 +85,7 @@ example Cursor `mcp.json` config:
 **Meta**
 
 - `supported_languages`: Return the list of langauges Semgrep supports
+- `semgrep_rule_schema`: Fetches the latest semgrep rule JSON Schema
 
 ## Usage
 

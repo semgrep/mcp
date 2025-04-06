@@ -7,6 +7,7 @@ import tempfile
 from typing import Any
 
 import click
+import httpx
 from mcp.server.fastmcp import FastMCP
 from mcp.shared.exceptions import McpError
 from mcp.types import (
@@ -14,15 +15,17 @@ from mcp.types import (
     INVALID_PARAMS,
     ErrorData,
 )
-from pydantic import BaseModel, Field
-from pydantic.error_wrappers import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
 # ---------------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------------
 
-VERSION = "0.1.8"
+VERSION = "0.1.9"
 DEFAULT_TIMEOUT = 300  # 5 mins in seconds
+
+SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
+SEMGREP_API_URL = f"{SEMGREP_URL}/api"
 
 # Field definitions for function parameters
 CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
@@ -398,14 +401,41 @@ mcp = FastMCP(
     request_timeout=DEFAULT_TIMEOUT,
 )
 
+http_client = httpx.AsyncClient()
+
+
+@mcp.tool()
+async def semgrep_rule_schema() -> str:
+    """
+    Get the schema for a Semgrep rule
+
+    Use this tool when you need to:
+      - get the schema required to write a Semgrep rule
+      - need to see what fields are available for a Semgrep rule
+      - verify what fields are available for a Semgrep rule
+      - verify the syntax for a Semgrep rule is correct
+    """
+
+    try:
+        response = await http_client.get(f"{SEMGREP_API_URL}/schema_url")
+        response.raise_for_status()
+        data: dict[str, str] = response.json()
+        schema_url: str = data["schema_url"]
+        response = await http_client.get(schema_url)
+        response.raise_for_status()
+        return str(response.text)
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error getting schema for Semgrep rule: {e!s}")
+        ) from e
+
 
 @mcp.tool()
 async def get_supported_languages() -> list[str]:
     """
     Returns a list of supported languages by Semgrep
 
-    Returns:
-        List of supported languages
+    Only use this tool if you are not sure what languages Semgrep supports.
     """
 
     args = ["show", "supported-languages", "--experimental"]
@@ -424,12 +454,9 @@ async def semgrep_scan_with_custom_rule(
     Runs a Semgrep scan with a custom rule on provided code content
     and returns the findings in JSON format
 
-    Args:
-        code_files: List of dictionaries with 'filename' and 'content' keys
-        rule: Semgrep YAML rule string
-
-    Returns:
-        Dictionary with scan results in Semgrep JSON format
+    Use this tool when you need to:
+      - scan code files for specific security vulnerability not covered by the default Semgrep rules
+      - scan code files for specific issue not covered by the default Semgrep rules
     """
     # Validate code_files
     validate_code_files(code_files)
@@ -473,12 +500,9 @@ async def semgrep_scan(
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
 
-    Args:
-        code_files: List of dictionaries with 'filename' and 'content' keys
-        config: Optional Semgrep configuration string (e.g. "auto", "p/ci", "p/security")
-
-    Returns:
-        Dictionary with scan results in Semgrep JSON format
+    Use this tool when you need to:
+      - scan code files for security vulnerabilities
+      - scan code files for other issues
     """
     # Validate config
     config = validate_config(config)
@@ -526,7 +550,7 @@ def main(transport: str) -> None:
     """Entry point for the MCP server
 
     Supports both stdio and sse transports. For stdio, it will read from stdin and write to stdout.
-    For sse, it will start an HTTP server on the specified host and port.
+    For sse, it will start an HTTP server on port 8000.
     """
     if transport == "stdio":
         mcp.run(transport="stdio")
