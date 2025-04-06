@@ -34,39 +34,74 @@ A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security 
 
 > This beta project is under active development, we would love your feedback, bug reports, feature requests. For more support, join our [community slack](https://go.semgrep.dev/slack) > `#mcp` channel.
 
+The purpose of this project is to make Semgrep available for any LLM or Agent to get access to the power of a fast, deterministic static analysis tool that can semantically understand many [languages](https://semgrep.dev/docs/supported-languages) with [5K+ rules](https://semgrep.dev/registry). You can also use it to [secure your vibe coding](https://www.linkedin.com/posts/daghanaltas_vibecoding-activity-7311434119924588545-EqvZ/) 😅
+
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) is a standardized API for LLMs, agents, and IDEs such as Cursor, VS Code, Windsurf, or any other tool that supports MCP, to get specialized help and context.
+
+## Contents
+
+- [Getting Started](#getting-started)
+  - [Cursor](#cursor)
+  - [Hosted Server](#hosted-server)
+- [Demo](#demo)
+- [Tools](#mcp-tools)
+
 ## Getting started
 
-As a [python package](https://pypi.org/p/semgrep-mcp) to install and run via pip, uv, etc. Defaults to running as a command ([stdio mode](https://modelcontextprotocol.io/docs/concepts/transports#built-in-transport-types))
+Install the [python package](https://pypi.org/p/semgrep-mcp) and run as a command ([stdio mode](https://modelcontextprotocol.io/docs/concepts/transports#built-in-transport-types))
 
 ```bash
-uvx semgrep-mcp # run with --help to see all the options
+uvx semgrep-mcp # see --help for more options
 ```
 
-or with as a [docker container](https://ghcr.io/semgrep/mcp). Defaults to running as a server ([SSE mode](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse)) but can run as command as shown here:
+or as a [docker container](https://ghcr.io/semgrep/mcp)
 
 ```bash
 docker run -i --rm ghcr.io/semgrep/mcp -t stdio 
 ```
 
-example Cursor `mcp.json` config:
+### Cursor
+
+example [`mcp.json`](https://docs.cursor.com/context/model-context-protocol) config:
 
 ```json
 {
   "mcpServers": {
     "semgrep": {
       "command": "uvx",
-      "args": ["semgrep-mcp"]
+      "args": ["semgrep-mcp"],
+      "env": {
+        "SEMGREP_APP_TOKEN": "<token>"
+      }
     }
   }
 }
 
 ```
 
+You can add an instruction to your [`.cursor/rules`](https://docs.cursor.com/context/rules-for-ai) to use the tools automatically
+
+```text
+Always scan code generated using Semgrep for security vulnerabilities
+```
+
+### Hosted Server
+
+> An experimental server that may break. As the MCP spec includes HTTP Streaming and OAuth, the server will gain new functionality
+
+```json
+{
+  "mcpServers": {
+    "semgrep": {
+      "url": "https://mcp.semgrep.ai/sse"
+    }
+  }
+}
+```
+
 ## Demo
 
 <a href="https://www.loom.com/share/8535d72e4cfc4e1eb1e03ea223a702df"> <img style="max-width:300px;" src="https://cdn.loom.com/sessions/thumbnails/8535d72e4cfc4e1eb1e03ea223a702df-1047fabea7261abb-full-play.gif"> </a>
-
-[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) is like Unix pipes or an API for LLMs, agents, and coding tools like Cursor, VS Code, Windsurf, Claude, or any other tool that support MCP, to get specialized help doing a task by using a tool.
 
 ## MCP Tools
 
