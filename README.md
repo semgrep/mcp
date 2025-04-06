@@ -42,7 +42,7 @@ As a [python package](https://pypi.org/p/semgrep-mcp) to install and run via pip
 uvx semgrep-mcp # run with --help to see all the options
 ```
 
-or with as a [docker container](https://ghcr.io/semgrep/mcp). Defaults to running as a server ([SSE mode](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse))
+or with as a [docker container](https://ghcr.io/semgrep/mcp). Defaults to running as a server ([SSE mode](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse)) but can run as command as shown here:
 
 ```bash
 docker run -i --rm ghcr.io/semgrep/mcp -t stdio 
