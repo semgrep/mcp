@@ -48,6 +48,7 @@ An MCP server for using [Semgrep](https://semgrep.dev) to scan code for security
 - [API](#api)
   - [Tools](#tools)
   - [Prompts](#prompts)
+  - [Resources](#resources)
 - [Usage](#usage)
   - [Standard Input/Output (stdio)](#standard-inputoutput-stdio)
   - [Server-Sent Events (SSE)](#server-sent-events-sse)
@@ -146,6 +147,13 @@ Enable LLMs to perform actions, make deterministic computations, and interact wi
 Reusable prompts to standardize common LLM interactions.
 
 - `write_custom_semgrep_rule`: Return a prompt to help write a Semgrep rule
+
+### Resources
+
+Expose data and content to LLMs
+
+- `semgrep://rule/schema`: Specification of the Semgrep rule YAML syntax using JSON schema
+- `semgrep://rule/{rule_id}/yaml`: Full Semgrep rule in YAML format from the Semgrep registry
 
 ## Usage
 
