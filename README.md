@@ -124,6 +124,8 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ### Tools
 
+Enable LLMs to perform actions, make deterministic computations, and interact with external services.
+
 #### Scanning Code
 
 - `security_check`: Scan code for security vulnerabilities
@@ -140,6 +142,8 @@ Always scan code generated using Semgrep for security vulnerabilities
 - `semgrep_rule_schema`: Fetches the latest semgrep rule JSON Schema
 
 ### Prompts
+
+Reusable prompts to standardize common LLM interactions.
 
 - `write_custom_semgrep_rule`: Return a prompt to help write a Semgrep rule
 
