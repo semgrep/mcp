@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field, ValidationError
 # Constants
 # ---------------------------------------------------------------------------------
 
-VERSION = "0.1.10"
+VERSION = "0.1.11"
 DEFAULT_TIMEOUT = 300  # 5 mins in seconds
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
@@ -548,27 +548,45 @@ async def semgrep_scan(
 @mcp.tool()
 async def security_check(
     code_files: list[CodeFile] = CODE_FILES_FIELD,
-) -> SemgrepScanResult:
+) -> str:
     """
-    Runs a fast security check on code and returns any issues as JSON
+    Runs a fast security check on code and returns any issues found.
 
     Use this tool when you need to:
       - scan code for security vulnerabilities
       - verify that code is secure
       - double check that code is secure before committing
       - get a second opinion on code security
+
+    If there are no issues, you can be reasonably confident that the code is secure.
     """
     # Validate code_files
     validate_code_files(code_files)
 
+    NO_FINDINGS_MESSAGE = """No security issues found in the code!"""
+    SECURITY_ISSUES_FOUND_MESSAGE_TEMPLATE = """{num_issues} security issues found in the code.
+
+Here are the details of the security issues found:
+    
+<security-issues>
+    {details}
+</security-issues>
+"""
     try:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
-        args = get_semgrep_scan_args(temp_dir, "p/security-audit")
+        args = get_semgrep_scan_args(temp_dir)
         output = await run_semgrep(args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
-        return results
+
+        if len(results.results) > 0:
+            return SECURITY_ISSUES_FOUND_MESSAGE_TEMPLATE.format(
+                num_issues=len(results.results),
+                details=results.model_dump_json(indent=2),
+            )
+        else:
+            return NO_FINDINGS_MESSAGE
 
     except McpError as e:
         raise e

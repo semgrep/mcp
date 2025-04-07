@@ -4,12 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "semgrep-mcp"
-version = "0.1.10"
+version = "0.1.11"
 description = "MCP Server for using Semgrep to scan code"
 readme = "README.md"
+changelog = "CHANGELOG.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [
+    { name = "Semgrep, Inc.", email = "hello@semgrep.com" },
     { name = "Seth Jaksik", email = "seth@semgrep.com" },
     { name = "Drew Dennison", email = "drew@semgrep.com" },
 ]
@@ -37,6 +39,7 @@ Homepage = "https://github.com/semgrep/mcp"
 Repository = "https://github.com/semgrep/mcp.git"
 Issues = "https://github.com/semgrep/mcp/issues"
 Documentation = "https://github.com/semgrep/mcp#readme"
+Changelog = "https://github.com/semgrep/mcp/blob/main/CHANGELOG.md"
 
 [project.scripts]
 semgrep-mcp = "semgrep_mcp.server:main"
