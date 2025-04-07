@@ -60,13 +60,13 @@ A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security 
 
 ## Getting started
 
-Run the [python package](https://pypi.org/p/semgrep-mcp) as a CLI command
+Run the [python package](https://pypi.org/p/semgrep-mcp) as a CLI command using [`uv`](https://docs.astral.sh/uv/guides/tools/):
 
 ```bash
 uvx semgrep-mcp # see --help for more options
 ```
 
-or as a [docker container](https://ghcr.io/semgrep/mcp)
+or as a [docker container](https://ghcr.io/semgrep/mcp):
 
 ```bash
 docker run -i --rm ghcr.io/semgrep/mcp -t stdio 
@@ -349,8 +349,6 @@ See [OpenAI Agents SDK docs](https://openai.github.io/openai-agents-python/mcp/)
 
 ### Custom Clients
 
-See [offical SDK docs](https://modelcontextprotocol.io/clients#adding-mcp-support-to-your-application) for more info.
-
 #### Example Python SSE Client
 
 ```python
@@ -370,6 +368,8 @@ results = client.call_tool("semgrep_scan",
   ]
 })
 ```
+
+See [offical SDK docs](https://modelcontextprotocol.io/clients#adding-mcp-support-to-your-application) for more info.
 
 ## Contributing, Community, and Running From Source
 
