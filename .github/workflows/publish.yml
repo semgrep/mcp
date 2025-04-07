@@ -3,7 +3,7 @@ name: Publish Python Package
 on:
   push:
     tags:
-      - 'v*'
+      - "v*.*.*"
 
 jobs:
   build-and-publish:
