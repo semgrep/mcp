@@ -412,6 +412,9 @@ mcp = FastMCP(
 
 http_client = httpx.AsyncClient()
 
+# ---------------------------------------------------------------------------------
+# MCP Tools
+# ---------------------------------------------------------------------------------
 
 @mcp.tool()
 async def semgrep_rule_schema() -> str:
@@ -660,6 +663,64 @@ async def get_abstract_syntax_tree(
         if "temp_dir" in locals():
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------------
+# MCP Prompts
+# ---------------------------------------------------------------------------------
+
+@mcp.prompt()
+def write_custom_semgrep_rule(
+    code: str = Field(description="The code to get the AST for"),
+    language: str = Field(description="The programming language of the code"),
+) -> str:
+    """
+    Write a custom Semgrep rule for the provided code and language
+
+    Use this prompt when you need to:
+      - write a custom Semgrep rule
+      - write a Semgrep rule for a specific issue or pattern
+    """
+
+    prompt_template = """You are an expert at writing Semgrep rules. Your task is to analyze a given piece of code and create a Semgrep rule that can detect specific patterns or issues within that code. Semgrep is a lightweight static analysis tool that uses pattern matching to find bugs and enforce code standards.
+
+Here is the code you need to analyze:
+
+<code>
+{code}
+</code>
+
+The code is written in the following programming language:
+
+<language>
+{language}
+</language>
+
+To write an effective Semgrep rule, follow these guidelines:
+1. Identify a specific pattern, vulnerability, or coding standard violation in the given code.
+2. Create a rule that matches this pattern as precisely as possible.
+3. Use Semgrep's pattern syntax, which is similar to the target language but with metavariables and ellipsis operators where appropriate.
+4. Consider the context and potential variations of the pattern you're trying to match.
+5. Provide a clear and concise message that explains what the rule detects.
+
+Write your Semgrep rule in YAML format. The rule should include at least the following keys:
+- rules
+- id
+- pattern
+- message
+- severity
+- languages
+
+Before providing the rule, briefly explain in a few sentences what specific issue or pattern your rule is designed to detect and why it's important.
+
+Then, output your Semgrep rule inside <semgrep_rule> tags. Ensure that the rule is properly formatted in YAML."""
+    
+    return prompt_template.format(code=code, language=language)
+
+
+# ---------------------------------------------------------------------------------
+# MCP Server Entry Point
+# ---------------------------------------------------------------------------------
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})

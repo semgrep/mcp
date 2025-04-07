@@ -123,20 +123,24 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ### Tools
 
-**Scanning Code**
+#### Scanning Code
 
 - `security_check`: Scan code for security vulnerabilities
 - `semgrep_scan`: Scan code files for security vulnerabilities with a given config string
 - `semgrep_scan_with_custom_rule`: Scan code files using a custom Semgrep rule
 
-**Understanding Code**
+#### Understanding Code
 
 - `get_abstract_syntax_tree`: Output the Abstract Syntax Tree (AST) of code
 
-**Meta**
+#### Meta
 
 - `supported_languages`: Return the list of langauges Semgrep supports
 - `semgrep_rule_schema`: Fetches the latest semgrep rule JSON Schema
+
+### Prompts
+
+- `write_custom_semgrep_rule`: Return a prompt to help write a Semgrep rule
 
 ## Usage
 
