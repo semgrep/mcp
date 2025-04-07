@@ -35,7 +35,7 @@ CONFIG_FIELD = Field(
 )
 
 RULE_FIELD = Field(description="Semgrep YAML rule string")
-
+RULE_ID_FIELD = Field(description="Semgrep rule ID")
 # ---------------------------------------------------------------------------------
 # Global Variables
 # ---------------------------------------------------------------------------------
@@ -743,6 +743,40 @@ Ensure that the rule is properly formatted in YAML.
 Make sure to include all the required keys and values in the rule."""
 
     return prompt_template.format(code=code, language=language)
+
+
+# ---------------------------------------------------------------------------------
+# MCP Resources
+# ---------------------------------------------------------------------------------
+
+
+@mcp.resource("semgrep://rule/schema")
+async def get_semgrep_rule_schema() -> str:
+    """Specification of the Semgrep rule YAML syntax using JSON schema."""
+
+    schema_url = "https://raw.githubusercontent.com/semgrep/semgrep-interfaces/refs/heads/main/rule_schema_v1.yaml"
+    try:
+        response = await http_client.get(schema_url)
+        response.raise_for_status()
+        return str(response.text)
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error loading Semgrep rule schema: {e!s}")
+        ) from e
+
+
+@mcp.resource("semgrep://rule/{rule_id}/yaml")
+async def get_semgrep_rule_yaml(rule_id: str = RULE_ID_FIELD) -> str:
+    """Full Semgrep rule in YAML format from the Semgrep registry."""
+
+    try:
+        response = await http_client.get(f"https://semgrep.dev/c/r/{rule_id}")
+        response.raise_for_status()
+        return str(response.text)
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error loading Semgrep rule schema: {e!s}")
+        ) from e
 
 
 # ---------------------------------------------------------------------------------
