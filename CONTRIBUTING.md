@@ -1,6 +1,6 @@
 # Contributing
 
-Your contributions to this project are most welcome! Please see the ["good first issue"](https://github.com/semgrep/mcp/labels/good%20first%20issue) label for easy tasks and join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel for help. 🙏
+Your contributions to this project are most welcome! Please see the ["good first issue"](https://github.com/semgrep/mcp/labels/good%20first%20issue) label for easy tasks and join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel for help.
 
 ### Setup
 
@@ -80,3 +80,19 @@ By default, the MCP server runs on `http://localhost:8000` with the inspector se
 **Note:** When opening the inspector sever, add query parameters to the url to increase the default timeout of the server from 10s
 
 [http://localhost:6274/?timeout=300000](http://localhost:6274/?timeout=300000)
+
+# Releasing
+
+1. First we need to bump the version
+
+   ```bash
+   # takes one argument {patch, minor, major} with 'minor' as the default argument
+   uv run python ./scripts/bump_version.py 
+   ```
+
+1. Verify the release diff looks right, add any [changelog](CHANGELOG.md) notes.
+1. Merge the release in to `main`
+1. Tag with `git tag -a vX.Y.Z -m "vX.Y.Z"`
+1. Verify builds are green
+1. Manually approve the [`publish.yaml`](https://github.com/semgrep/mcp/actions/workflows/publish.yml) workflow.
+1. Verify the release looks good on [PyPI](https://pypi.org/p/semgrep-mcp)
