@@ -406,7 +406,7 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 # Create a fast MCP server
 mcp = FastMCP(
     "Semgrep",
-    version=VERSION,
+    version=__version__,
     request_timeout=DEFAULT_TIMEOUT,
 )
 
@@ -663,7 +663,7 @@ async def get_abstract_syntax_tree(
 
 
 @click.command()
-@click.version_option(version=VERSION, prog_name="Semgrep MCP Server")
+@click.version_option(version=__version__, prog_name="Semgrep MCP Server")
 @click.option(
     "-t",
     "--transport",
