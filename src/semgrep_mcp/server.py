@@ -563,11 +563,11 @@ async def security_check(
     # Validate code_files
     validate_code_files(code_files)
 
-    NO_FINDINGS_MESSAGE = """No security issues found in the code!"""
-    SECURITY_ISSUES_FOUND_MESSAGE_TEMPLATE = """{num_issues} security issues found in the code.
+    no_findings_message = """No security issues found in the code!"""
+    security_issues_found_message_template = """{num_issues} security issues found in the code.
 
 Here are the details of the security issues found:
-    
+
 <security-issues>
     {details}
 </security-issues>
@@ -581,12 +581,12 @@ Here are the details of the security issues found:
         remove_temp_dir_from_results(results, temp_dir)
 
         if len(results.results) > 0:
-            return SECURITY_ISSUES_FOUND_MESSAGE_TEMPLATE.format(
+            return security_issues_found_message_template.format(
                 num_issues=len(results.results),
                 details=results.model_dump_json(indent=2),
             )
         else:
-            return NO_FINDINGS_MESSAGE
+            return no_findings_message
 
     except McpError as e:
         raise e

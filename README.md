@@ -202,6 +202,7 @@ docker run -p 8000:0000 ghcr.io/semgrep/mcp
 ```
 
 ## Semgrep AppSec Platform
+
 To optionally connect to Semgrep AppSec Platform:
 
 1. [Login](https://semgrep.dev/login/) or sign up
@@ -400,5 +401,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more info and details how to run from
 
 - [MCP.so](https://mcp.so/server/mcp/semgrep)
 
----
+______________________________________________________________________
+
 Made with ❤️ by the [Semgrep Team](https://semgrep.dev/about/)
