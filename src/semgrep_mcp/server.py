@@ -416,6 +416,7 @@ http_client = httpx.AsyncClient()
 # MCP Tools
 # ---------------------------------------------------------------------------------
 
+
 @mcp.tool()
 async def semgrep_rule_schema() -> str:
     """
@@ -669,6 +670,7 @@ async def get_abstract_syntax_tree(
 # MCP Prompts
 # ---------------------------------------------------------------------------------
 
+
 @mcp.prompt()
 def write_custom_semgrep_rule(
     code: str = Field(description="The code to get the AST for"),
@@ -682,7 +684,12 @@ def write_custom_semgrep_rule(
       - write a Semgrep rule for a specific issue or pattern
     """
 
-    prompt_template = """You are an expert at writing Semgrep rules. Your task is to analyze a given piece of code and create a Semgrep rule that can detect specific patterns or issues within that code. Semgrep is a lightweight static analysis tool that uses pattern matching to find bugs and enforce code standards.
+    prompt_template = """You are an expert at writing Semgrep rules.
+
+Your task is to analyze a given piece of code and create a Semgrep rule
+that can detect specific patterns or issues within that code.
+Semgrep is a lightweight static analysis tool that uses pattern matching
+to find bugs and enforce code standards.
 
 Here is the code you need to analyze:
 
@@ -697,11 +704,27 @@ The code is written in the following programming language:
 </language>
 
 To write an effective Semgrep rule, follow these guidelines:
-1. Identify a specific pattern, vulnerability, or coding standard violation in the given code.
+1. Identify a specific pattern, vulnerability, or
+coding standard violation in the given code.
 2. Create a rule that matches this pattern as precisely as possible.
-3. Use Semgrep's pattern syntax, which is similar to the target language but with metavariables and ellipsis operators where appropriate.
+3. Use Semgrep's pattern syntax, which is similar to the target language
+but with metavariables and ellipsis operators where appropriate.
 4. Consider the context and potential variations of the pattern you're trying to match.
 5. Provide a clear and concise message that explains what the rule detects.
+6. The value of the `severity` must be one of the following:
+    - "ERROR"
+    - "WARNING"
+    - "INFO"
+    - "INVENTORY"
+    - "EXPERIMENT"
+    - "CRITICAL"
+    - "HIGH"
+    - "MEDIUM"
+    - "LOW"
+
+7. The value of the `languages` must be a list of languages that the rule is applicable
+to and include the language given in <language> tags.
+
 
 Write your Semgrep rule in YAML format. The rule should include at least the following keys:
 - rules
@@ -711,10 +734,14 @@ Write your Semgrep rule in YAML format. The rule should include at least the fol
 - severity
 - languages
 
-Before providing the rule, briefly explain in a few sentences what specific issue or pattern your rule is designed to detect and why it's important.
+Before providing the rule, briefly explain in a few sentences what specific issue or
+pattern your rule is designed to detect and why it's important.
 
-Then, output your Semgrep rule inside <semgrep_rule> tags. Ensure that the rule is properly formatted in YAML."""
-    
+Then, output your Semgrep rule inside <semgrep_rule> tags.
+
+Ensure that the rule is properly formatted in YAML.
+Make sure to include all the required keys and values in the rule."""
+
     return prompt_template.format(code=code, language=language)
 
 
