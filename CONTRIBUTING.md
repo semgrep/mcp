@@ -66,3 +66,17 @@ docker run -i --rm semgrep-mcp -t stdio
 ```bash
 docker run -p 8000:8000 semgrep-mcp
 ```
+
+### Running the Development Server
+
+Start the MCP server in development mode:
+
+```bash
+uv run mcp dev server.py
+```
+
+By default, the MCP server runs on `http://localhost:8000` with the inspector server on `http://localhost:6274`.
+
+**Note:** When opening the inspector sever, add query parameters to the url to increase the default timeout of the server from 10s
+
+[http://localhost:6274/?timeout=300000](http://localhost:6274/?timeout=300000)

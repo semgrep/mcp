@@ -60,7 +60,7 @@ A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security 
 
 ## Getting started
 
-Install the [python package](https://pypi.org/p/semgrep-mcp) and run as a command ([stdio mode](https://modelcontextprotocol.io/docs/concepts/transports#built-in-transport-types))
+Run the [python package](https://pypi.org/p/semgrep-mcp) as a CLI command
 
 ```bash
 uvx semgrep-mcp # see --help for more options
