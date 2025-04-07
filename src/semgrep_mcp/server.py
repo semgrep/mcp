@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field, ValidationError
 # Constants
 # ---------------------------------------------------------------------------------
 
-__version__ = "0.1.12"
+__version__ = "0.1.13"
 DEFAULT_TIMEOUT = 300  # 5 mins in seconds
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")

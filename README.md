@@ -159,9 +159,9 @@ Usage: semgrep-mcp [OPTIONS]
   and write to stdout. For sse, it will start an HTTP server on port 8000.
 
 Options:
-  --version                    Show the version and exit.
+  -v, --version                Show version and exit.
   -t, --transport [stdio|sse]  Transport protocol to use (stdio or sse)
-  --help                       Show this message and exit.
+  -h, --help                   Show this message and exit.
 ```
 
 ### Standard Input/Output (stdio)
