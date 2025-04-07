@@ -1,10 +1,10 @@
 name: Publish Python Package
 
 on:
-  workflow_dispatch:
   push:
     tags:
       - 'v*'
+    branches: [] # release only on tags
 
 jobs:
   build-and-publish:

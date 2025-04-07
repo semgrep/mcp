@@ -45,7 +45,7 @@ Changelog = "https://github.com/semgrep/mcp/blob/main/CHANGELOG.md"
 semgrep-mcp = "semgrep_mcp.server:main"
 
 [tool.uv]
-dev-dependencies = ["mcp[cli]>=1.6.0", "ruff>=0.11.4", "mypy>=1.15.0", "pytest>=8.1.1"]
+dev-dependencies = ["mcp[cli]>=1.6.0", "ruff>=0.11.4", "mypy>=1.15.0", "pytest>=8.1.1", "tomli>=2.0.1", "tomli-w>=1.0.0"]
 
 [tool.ruff]
 target-version = "py310"
