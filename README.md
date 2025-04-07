@@ -26,17 +26,18 @@
 
 [![Install in VS Code UV](https://img.shields.io/badge/VS_Code-uv-0098FF?style=flat-square&logo=githubcopilot&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22semgrep-mcp%22%5D%7D)
 [![Install in VS Code Docker](https://img.shields.io/badge/VS_Code-docker-0098FF?style=flat-square&logo=githubcopilot&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%20%22-i%22%2C%20%22--rm%22%2C%20%22ghcr.io%2Fsemgrep%2Fmcp%22%2C%20%22-t%22%2C%20%22stdio%22%5D%7D)
-[![Install in VS Code semgrep.ai](https://img.shields.io/badge/VS_Code-semgrep.ai-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep.ai&config=%7B%22type%22%3A%20%22sse%22%2C%20%22url%22%3A%22https%3A%2F%2Fmcp.semgrep.ai%2Fsse%22%7D)
+[![Install in VS Code semgrep.ai](https://img.shields.io/badge/VS_Code-semgrep.ai-0098FF?style=flat-square&logo=githubcopilot&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep.ai&config=%7B%22type%22%3A%20%22sse%22%2C%20%22url%22%3A%22https%3A%2F%2Fmcp.semgrep.ai%2Fsse%22%7D)
 [![PyPI](https://img.shields.io/pypi/v/semgrep-mcp?style=flat-square&color=blue&logo=python&logoColor=white)](https://pypi.org/project/semgrep-mcp/)
 [![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fsemgrep%2Fmcp-0098FF?style=flat-square&logo=docker&logoColor=white)](https://ghcr.io/semgrep/mcp)
-[![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-uv-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22semgrep-mcp%22%5D%7D&quality=insiders)
-[![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-docker-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%20%22-i%22%2C%20%22--rm%22%2C%20%22ghcr.io%2Fsemgrep%2Fmcp%22%2C%20%22-t%22%2C%20%22stdio%22%5D%7D&quality=insiders)
+[![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-uv-24bfa5?style=flat-square&logo=githubcopilot&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22semgrep-mcp%22%5D%7D&quality=insiders)
+[![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-docker-24bfa5?style=flat-square&logo=githubcopilot&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%20%22-i%22%2C%20%22--rm%22%2C%20%22ghcr.io%2Fsemgrep%2Fmcp%22%2C%20%22-t%22%2C%20%22stdio%22%5D%7D&quality=insiders)
 
-A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies. Secure your [vibe coding](https://semgrep.dev/blog/2025/giving-appsec-a-seat-at-the-vibe-coding-table/)! 😅
-
-> This beta project is under active development, we would love your feedback, bug reports, and feature requests. Join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel!
+An MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies. Secure your [vibe coding](https://semgrep.dev/blog/2025/giving-appsec-a-seat-at-the-vibe-coding-table/)! 😅
 
 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) is a standardized API for LLMs, Agents, and IDEs like Cursor, VS Code, Windsurf, or anything that supports MCP, to get specialized help, context, and harness the power of tools. Semgrep is a fast, deterministic static analysis semantically understands many [languages](https://semgrep.dev/docs/supported-languages) and comes with with over [5,000 rules](https://semgrep.dev/registry). 🛠️
+
+> [!NOTE]
+> This beta project is under active development, we would love your feedback, bug reports, feature requests, and code. Join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel!
 
 ## Contents
 
@@ -99,7 +100,8 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ### Hosted Server
 
-> An experimental server that may break. Once the MCP spec gains support for HTTP Streaming and OAuth in the near future, it will gain new functionality. 🚀
+> [!WARNING]
+> This is an experimental server that may break. Once the MCP spec gains support for HTTP Streaming and OAuth in the near future, it will gain new functionality. 🚀
 
 `mcp.json`
 
@@ -200,9 +202,6 @@ docker run -p 8000:0000 ghcr.io/semgrep/mcp
 ```
 
 ## Semgrep AppSec Platform
-
-> Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed. ☎️
-
 To optionally connect to Semgrep AppSec Platform:
 
 1. [Login](https://semgrep.dev/login/) or sign up
@@ -219,6 +218,9 @@ To optionally connect to Semgrep AppSec Platform:
        "SEMGREP_APP_TOKEN": "<token>"
      }
      ```
+
+> [!TIP]
+> Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed. ☎️
 
 ## Integrations
 
@@ -245,7 +247,7 @@ See [cursor docs](https://docs.cursor.com/context/model-context-protocol) for mo
 
 Click the install buttons at the top of this README for the quickest installation.
 
-#### Manaul Configuration
+#### Manual Configuration
 
 Add the following JSON block to your User Settings (JSON) file in VS Code. You can do this by pressing `Ctrl + Shift + P` and typing `Preferences: Open User Settings (JSON)`.
 
@@ -331,7 +333,7 @@ Add the following JSON block to your `claude_desktop_config.json` file:
 }
 ```
 
-See [Anthropci docs](https://docs.anthropic.com/en/docs/agents-and-tools/mcp) for more info.
+See [Anthropic docs](https://docs.anthropic.com/en/docs/agents-and-tools/mcp) for more info.
 
 ### OpenAI
 
@@ -373,7 +375,8 @@ See [offical SDK docs](https://modelcontextprotocol.io/clients#adding-mcp-suppor
 
 ## Contributing, Community, and Running From Source
 
-> We love your feedback, bug reports, feature requests, and code. Join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel! 🙏
+> [!NOTE]
+> We love your feedback, bug reports, feature requests, and code. Join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel!
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for more info and details how to run from the MCP server from source code.
 
@@ -397,4 +400,5 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more info and details how to run from
 
 - [MCP.so](https://mcp.so/server/mcp/semgrep)
 
+---
 Made with ❤️ by the [Semgrep Team](https://semgrep.dev/about/)
