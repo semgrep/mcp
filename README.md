@@ -32,7 +32,7 @@
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-uv-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22semgrep-mcp%22%5D%7D&quality=insiders)
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-docker-24bfa5?style=flat-square&logo=visualstudiocode&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%20%22-i%22%2C%20%22--rm%22%2C%20%22ghcr.io%2Fsemgrep%2Fmcp%22%2C%20%22-t%22%2C%20%22stdio%22%5D%7D&quality=insiders)
 
-A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies. Secure your [vibe coding](https://www.linkedin.com/posts/daghanaltas_vibecoding-activity-7311434119924588545-EqvZ/)! 😅
+A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security vulnerabilies. Secure your [vibe coding](https://semgrep.dev/blog/2025/giving-appsec-a-seat-at-the-vibe-coding-table/)! 😅
 
 > This beta project is under active development, we would love your feedback, bug reports, and feature requests. Join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel!
 
@@ -44,9 +44,19 @@ A MCP server for using [Semgrep](https://semgrep.dev) to scan code for security 
   - [Cursor](#cursor)
   - [Hosted Server](#hosted-server)
 - [Demo](#demo)
-- [Tools](#mcp-tools)
-- [Semgrep AppSec Platform](#semgrep-appsec-platform)
+- [API](#api)
+  - [Tools](#tools)
 - [Usage](#usage)
+  - [Standard Input/Output (stdio)](#standard-inputoutput-stdio)
+  - [Server-Sent Events (SSE)](#server-sent-events-sse)
+- [Semgrep AppSec Platform](#semgrep-appsec-platform)
+- [Integrations](#integrations)
+  - [Cursor IDE](#cursor-ide)
+  - [VS Code / Copilot](#vs-code--copilot)
+  - [Windsurf](#windsurf)
+  - [Claude Desktop](#claude-desktop)
+  - [OpenAI](#openai)
+- [Contributing, Community, and Running From Source](#contributing-community-and-running-from-source)
 
 ## Getting started
 
@@ -89,7 +99,7 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ### Hosted Server
 
-> An experimental server that may break. Once the MCP spec gains support for HTTP Streaming and OAuth in the near future, it will gain new functionality.🚀
+> An experimental server that may break. Once the MCP spec gains support for HTTP Streaming and OAuth in the near future, it will gain new functionality. 🚀
 
 `mcp.json`
 
@@ -107,7 +117,9 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 <a href="https://www.loom.com/share/8535d72e4cfc4e1eb1e03ea223a702df"> <img style="max-width:300px;" src="https://cdn.loom.com/sessions/thumbnails/8535d72e4cfc4e1eb1e03ea223a702df-1047fabea7261abb-full-play.gif"> </a>
 
-## MCP Tools
+## API
+
+### Tools
 
 **Scanning Code**
 
@@ -123,27 +135,6 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 - `supported_languages`: Return the list of langauges Semgrep supports
 - `semgrep_rule_schema`: Fetches the latest semgrep rule JSON Schema
-
-## Semgrep AppSec Platform
-
-> Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed. ☎️
-
-To optionally connect to Semgrep AppSec Platform:
-
-1. [Login](https://semgrep.dev/login/) or sign up
-1. Generate a token from [Settings](https://semgrep.dev/orgs/-/settings/tokens/api) page
-1. Add it to your environment variables
-   - CLI (`export SEMGREP_APP_TOKEN=<token>`)
-
-   - Docker (`docker run -e SEMGREP_APP_TOKEN=<token>`)
-
-   - MCP Config JSON
-
-     ```json
-     "env": {
-       "SEMGREP_APP_TOKEN": "<token>"
-     }
-     ```
 
 ## Usage
 
@@ -166,72 +157,166 @@ Options:
   --help                       Show this message and exit.
 ```
 
-## Run From Source
+### Standard Input/Output (stdio)
 
-### Setup
+The stdio transport enables communication through standard input and output streams. This is particularly useful for local integrations and command-line tools. See the [spec](https://modelcontextprotocol.io/docs/concepts/transports#built-in-transport-types) for more details.
 
-#### CLI Environment
+#### Python
 
-1. Install `uv` using their [installation instructions](https://docs.astral.sh/uv/getting-started/installation/)
+```bash
+semgrep-mcp
+```
 
-1. Ensure you have Python 3.13+ installed
-
-1. Clone this repository
-
-1. Install Semgrep ([additional methods](https://semgrep.dev/docs/getting-started/quickstart)):
-
-   ```bash
-   pip install semgrep
-   ```
+By default, the python package will run in `stdio` mode. Because it's using the standard input and output streams, it will look like the tool is hanging without any print outs but this is normal.
 
 #### Docker
 
-1. Install `docker` using their [installation instructions](https://docs.docker.com/get-started/get-docker/)
-1. Clone this repository
-1. Build the server
+This server is published to Github's Container Registry ([ghcr.io/semgrep/mcp](http://ghcr.io/semgrep/mcp))
 
-```bash
-docker build -t semgrep-mcp .
+```
+docker run -i --rm ghcr.io/semgrep/mcp -t stdio
 ```
 
-### Running
+By default, the docker container is in `SSE` mode, so you will have to include `-t stdio` after the image name and run with `-i` to run in [interactive](https://docs.docker.com/reference/cli/docker/container/run/#interactive) mode.
 
-#### CLI Environment
+### Server-Sent Events (SSE)
 
-##### SSE Mode<a name="sse-mode"></a>
+SSE transport enables server-to-client streaming with HTTP POST requests for client-to-server communication. See the [spec](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse) for more details.
 
-```bash
-uv run mcp run ./src/semgrep_mcp/server.py -t sse
-```
+By default, the server wil listen on [0.0.0.0:8000/sse](https://127.0.0.1/sse) for client connections. To change any of this, set [FASTMCP\_\*](https://github.com/modelcontextprotocol/python-sdk/blob/main/src/mcp/server/fastmcp/server.py#L63) environment variables. _The server must be running for clients to connect to it._
 
-Or as a script
+#### Python
 
 ```bash
-chmod +x ./src/semgrep_mcp/server.py
-./src/semgrep_mcp/server.py -t sse
+semgrep-mcp -t sse
 ```
 
-##### STDIO Mode<a name="stdio-mode"></a>
-
-```bash
-uv run mcp run ./src/semgrep_mcp/server.py -t stdio
-```
-
-See the official [python mcp sdk](https://github.com/modelcontextprotocol/python-sdk) for more details and configuration options.
+By default, the python package will run in `stdio` mode, so you will have to include `-t sse`.
 
 #### Docker
 
-```bash
-docker run -p 8000:8000 semgrep-mcp
+```
+docker run -p 8000:0000 ghcr.io/semgrep/mcp
 ```
 
-Also published to [ghcr.io/semgrep/mcp](http://ghcr.io/semgrep/mcp)
+## Semgrep AppSec Platform
 
-```bash
-docker run -p 8000:8000 ghcr.io/semgrep/mcp:latest
+> Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed. ☎️
+
+To optionally connect to Semgrep AppSec Platform:
+
+1. [Login](https://semgrep.dev/login/) or sign up
+1. Generate a token from [Settings](https://semgrep.dev/orgs/-/settings/tokens/api) page
+1. Add it to your environment variables
+   - CLI (`export SEMGREP_APP_TOKEN=<token>`)
+
+   - Docker (`docker run -e SEMGREP_APP_TOKEN=<token>`)
+
+   - MCP Config JSON
+
+     ```json
+     "env": {
+       "SEMGREP_APP_TOKEN": "<token>"
+     }
+     ```
+
+## Integrations
+
+### Cursor IDE
+
+Add the following JSON block to your `~/.cursor/mcp.json` global or `.cursor/mcp.json` project-specific configuration file.
+
+```json
+{
+  "mcpServers": {
+    "semgrep": {
+      "command": "uvx",
+      "args": ["semgrep-mcp"]
+    }
+  }
+}
+
 ```
 
-### Creating your own client
+![cursor MCP settings](/images/cursor.png)
+
+See [cursor docs](https://docs.cursor.com/context/model-context-protocol) for more info.
+
+### VS Code / Copilot
+
+Click the install buttons at the top of this README for the quickest installation.
+
+#### Manaul Configuration
+
+Add the following JSON block to your User Settings (JSON) file in VS Code. You can do this by pressing `Ctrl + Shift + P` and typing `Preferences: Open User Settings (JSON)`.
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "semgrep": {
+        "command": "uvx",
+        "args": ["semgrep-mcp"]
+      }
+    }
+  }
+}
+```
+
+Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "servers": {
+    "semgrep": {
+      "command": "uvx",
+        "args": ["semgrep-mcp"]
+    }
+  }
+}
+```
+
+#### Using Docker
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "semgrep": {
+        "command": "docker",
+        "args": [
+          "run",
+          "-i",
+          "--rm",
+          "ghcr.io/semgrep/mcp",
+          "-t",
+          "stdio"
+        ]
+      }
+    }
+  }
+}
+```
+
+See [VS Code docs](https://code.visualstudio.com/docs/copilot/chat/mcp-servers) for more info.
+
+### Windsurf
+
+See [Windsurf docs](https://docs.windsurf.com/windsurf/mcp) for more info.
+
+### Claude Desktop
+
+See [Anthropci docs](https://docs.anthropic.com/en/docs/agents-and-tools/mcp) for more info.
+
+### OpenAI
+
+See [OpenAI Agents SDK docs](https://openai.github.io/openai-agents-python/mcp/) for more info.
+
+### Custom Clients
+
+See [offical SDK docs](https://modelcontextprotocol.io/clients#adding-mcp-support-to-your-application) for more info.
+
+#### Example Python SSE Client
 
 ```python
 from mcp.client import Client
@@ -251,94 +336,16 @@ results = client.call_tool("semgrep_scan",
 })
 ```
 
-### Manual Installation into VS Code
+## Contributing, Community, and Running From Source
 
-Click the install buttons at the top of this section for the quickest installation method. Alternatively, you can manually configure the server using one of the methods below.
+> We love your feedback, bug reports, feature requests, and code. Join the `#mcp` [community slack](https://go.semgrep.dev/slack) channel! 🙏
 
-#### Using UV
-
-Add the following JSON block to your User Settings (JSON) file in VS Code. You can do this by pressing `Ctrl + Shift + P` and typing `Preferences: Open User Settings (JSON)`.
-
-```json
-{
-  "mcp": {
-    "servers": {
-      "semgrep": {
-        "command": "uv",
-        "args": ["run", "mcp", "run", "src", "semgrep_mcp", "server.py"]
-      }
-    }
-  }
-}
-```
-
-Optionally, you can add it to a file called `.vscode/mcp.json` in your workspace:
-
-```json
-{
-  "servers": {
-    "semgrep": {
-      "command": "uv",
-        "args": ["run", "mcp", "run", "src", "semgrep_mcp", "server.py"]
-    }
-  }
-}
-```
-
-## Cursor in SSE Mode
-
-1. Ensure your Semgrep MCP is [running in SSE mode](#sse-mode) in the terminal
-1. Go to Cursor > Settings > Cursor Settings
-1. Choose the `MCP` tab
-1. Click "Add new MCP server"
-1. Name: `Semgrep`, Type: `sse`, Server URL: `http://127.0.0.1:8000/sse`
-1. Ensure the MCP server is enabled
-
-![cursor MCP settings](/images/cursor.png)
-
-You can also set it up by adding this to `~/.cursor/mcp.json`
-
-```json
-{
-  "mcpServers": {
-    "Semgrep": {
-      "url": "http://localhost:8000/sse"
-    }
-  }
-}
-```
-
-## Development
-
-> Your contributions to this project are most welcome. Please see the ["good first issue"](https://github.com/semgrep/mcp/labels/good%20first%20issue) label for easy tasks.
-
-### Running the Development Server
-
-Start the MCP server in development mode:
-
-```bash
-uv run mcp dev server.py
-```
-
-By default, the MCP server runs on `http://localhost:8000` with the inspector server on `http://localhost:6274`.
-
-**Note:** When opening the inspector sever, add query parameters to the url to increase the default timeout of the server from 10s
-
-[http://localhost:6274/?timeout=300000](http://localhost:6274/?timeout=300000)
-
-## Community & Related Projects
-
-This project builds upon and is inspired by several awesome community projects:
-
-### Core Technologies 🛠️
-
-- [Semgrep](https://github.com/semgrep/semgrep) - The underlying static analysis engine that powers this project
-- [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) - The protocol that enables AI agent communication
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more info and details how to run from the MCP server from source code.
 
 ### Similar Tools 🔍
 
-- [semgrep-vscode](https://github.com/semgrep/semgrep-vscode) - Official VSCode extension for Semgrep
-- [semgrep-intellij](https://github.com/semgrep/semgrep-intellij) - IntelliJ plugin for Semgrep
+- [semgrep-vscode](https://github.com/semgrep/semgrep-vscode) - Official VS Code extension
+- [semgrep-intellij](https://github.com/semgrep/semgrep-intellij) - IntelliJ plugin
 
 ### Community Projects 🌟
 
@@ -354,3 +361,5 @@ This project builds upon and is inspired by several awesome community projects:
   </a>
 
 - [MCP.so](https://mcp.so/server/mcp/semgrep)
+
+Made with ❤️ by the [Semgrep Team](https://semgrep.dev/about/)
