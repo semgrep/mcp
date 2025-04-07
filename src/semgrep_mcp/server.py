@@ -662,8 +662,13 @@ async def get_abstract_syntax_tree(
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-@click.command()
-@click.version_option(version=__version__, prog_name="Semgrep MCP Server")
+@click.command(context_settings={"help_option_names": ["-h", "--help"]})
+@click.version_option(
+    __version__,
+    "-v",
+    "--version",
+    help="Show version and exit.",
+)
 @click.option(
     "-t",
     "--transport",
