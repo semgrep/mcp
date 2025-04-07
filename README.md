@@ -47,6 +47,7 @@ An MCP server for using [Semgrep](https://semgrep.dev) to scan code for security
 - [Demo](#demo)
 - [API](#api)
   - [Tools](#tools)
+  - [Prompts](#prompts)
 - [Usage](#usage)
   - [Standard Input/Output (stdio)](#standard-inputoutput-stdio)
   - [Server-Sent Events (SSE)](#server-sent-events-sse)
