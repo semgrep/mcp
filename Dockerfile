@@ -40,5 +40,9 @@ USER app
 
 EXPOSE 8000
 
+LABEL org.opencontainers.image.source=https://github.com/semgrep/mcp
+LABEL org.opencontainers.image.description="Semgrep MCP Server"
+LABEL org.opencontainers.image.licenses=MIT
+
 ENTRYPOINT ["semgrep-mcp"]
 CMD ["-t", "sse"]
