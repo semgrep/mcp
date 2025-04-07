@@ -138,9 +138,9 @@ Always scan code generated using Semgrep for security vulnerabilities
 
 ## Usage
 
-This package is published to PyPI as [semgrep-mcp](https://pypi.org/p/semgrep-mcp) and can be installed and run with [pip](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#install-a-package), [pipx](https://pipx.pypa.io/), [uv](https://docs.astral.sh/uv/), [poetry](https://python-poetry.org/), or any python package manager.
+This python package is published to PyPI as [semgrep-mcp](https://pypi.org/p/semgrep-mcp) and can be installed and run with [pip](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#install-a-package), [pipx](https://pipx.pypa.io/), [uv](https://docs.astral.sh/uv/), [poetry](https://python-poetry.org/), or any python package manager.
 
-```bash
+```text
 $ pipx install semgrep-mcp
 $ semgrep-mcp --help
 
@@ -224,7 +224,7 @@ To optionally connect to Semgrep AppSec Platform:
 
 ### Cursor IDE
 
-Add the following JSON block to your `~/.cursor/mcp.json` global or `.cursor/mcp.json` project-specific configuration file.
+Add the following JSON block to your `~/.cursor/mcp.json` global or `.cursor/mcp.json` project-specific configuration file:
 
 ```json
 {
@@ -235,7 +235,6 @@ Add the following JSON block to your `~/.cursor/mcp.json` global or `.cursor/mcp
     }
   }
 }
-
 ```
 
 ![cursor MCP settings](/images/cursor.png)
@@ -302,13 +301,49 @@ See [VS Code docs](https://code.visualstudio.com/docs/copilot/chat/mcp-servers) 
 
 ### Windsurf
 
+Add the following JSON block to your `~/.codeium/windsurf/mcp_config.json` file:
+
+```json
+{
+  "mcpServers": {
+    "semgrep": {
+      "command": "uvx",
+      "args": ["semgrep-mcp"]
+    }
+  }
+}
+```
+
 See [Windsurf docs](https://docs.windsurf.com/windsurf/mcp) for more info.
 
 ### Claude Desktop
 
+Add the following JSON block to your `claude_desktop_config.json` file:
+
+```json
+{
+  "mcpServers": {
+    "semgrep": {
+      "command": "uvx",
+      "args": ["semgrep-mcp"]
+    }
+  }
+}
+```
+
 See [Anthropci docs](https://docs.anthropic.com/en/docs/agents-and-tools/mcp) for more info.
 
 ### OpenAI
+
+```python
+async with MCPServerStdio(
+    params={
+        "command": "uvx",
+        "args": ["semgrep-mcp"],
+    }
+) as server:
+    tools = await server.list_tools()
+```
 
 See [OpenAI Agents SDK docs](https://openai.github.io/openai-agents-python/mcp/) for more info.
 
