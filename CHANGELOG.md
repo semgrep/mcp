@@ -1,5 +1,9 @@
 # Changelog
 
+## [unreleased] - [see changes](https://github.com/semgrep/mcp/compare/v0.1.13...HEAD)
+
+- Resources [See README](README.md#resources)
+
 ## [0.1.13] - 2025-04-07
 
 - add `write_custom_semgrep_rule` prompt to MCP server
