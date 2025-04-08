@@ -371,11 +371,14 @@ See [OpenAI Agents SDK docs](https://openai.github.io/openai-agents-python/mcp/)
 
 #### Example Python SSE Client
 
+Some client libraries want the `url`: [http://localhost:8000/sse](http://localhost:8000/sse) and others only want the `host`: `localhost:8000`. 
+Try it out the URL a web browser, to confirm the server is running and there are no network issues.
+
 ```python
 from mcp.client import Client
 
 client = Client()
-client.connect("localhost:8000")
+client.connect("localhost:8000/sse")
 
 # Scan code for security issues
 results = client.call_tool("semgrep_scan", 
