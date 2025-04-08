@@ -59,6 +59,7 @@ An MCP server for using [Semgrep](https://semgrep.dev) to scan code for security
   - [Windsurf](#windsurf)
   - [Claude Desktop](#claude-desktop)
   - [OpenAI](#openai)
+  - [Write your own](#custom-clients)
 - [Contributing, Community, and Running From Source](#contributing-community-and-running-from-source)
 
 ## Getting started
@@ -374,9 +375,6 @@ See [OpenAI Agents SDK docs](https://openai.github.io/openai-agents-python/mcp/)
 See a full example in [examples/sse_client.py](examples/sse_client.py)
 
 ```python
-import asyncio
-import json
-
 from mcp.client.session import ClientSession
 from mcp.client.sse import sse_client
 
@@ -400,8 +398,8 @@ async def main():
 ```
 
 > [!TIP]
-> Some client libraries want the `URL`: [http://localhost:8000/sse](http://localhost:8000/sse) 
-> and others only want the `HOST`: `localhost:8000`. 
+> Some client libraries want the `URL`: [http://localhost:8000/sse](http://localhost:8000/sse)
+> and others only want the `HOST`: `localhost:8000`.
 > Try it out the `URL` in a web browser to confirm the server is running and there are no network issues.
 
 See [offical SDK docs](https://modelcontextprotocol.io/clients#adding-mcp-support-to-your-application) for more info.
