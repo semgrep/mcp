@@ -371,26 +371,38 @@ See [OpenAI Agents SDK docs](https://openai.github.io/openai-agents-python/mcp/)
 
 #### Example Python SSE Client
 
-Some client libraries want the `url`: [http://localhost:8000/sse](http://localhost:8000/sse) and others only want the `host`: `localhost:8000`. 
-Try it out the URL a web browser, to confirm the server is running and there are no network issues.
+See a full example in [examples/sse_client.py](examples/sse_client.py)
 
 ```python
-from mcp.client import Client
+import asyncio
+import json
 
-client = Client()
-client.connect("localhost:8000/sse")
+from mcp.client.session import ClientSession
+from mcp.client.sse import sse_client
 
-# Scan code for security issues
-results = client.call_tool("semgrep_scan", 
-  {
-  "code_files": [
-    {
-      "filename": "hello_world.py",
-      "content": "def hello(): ..."
-    }
-  ]
-})
+
+async def main():
+    async with sse_client("http://localhost:8000/sse") as (read_stream, write_stream):
+        async with ClientSession(read_stream, write_stream) as session:
+            await session.initialize()
+            results = await session.call_tool(
+                "semgrep_scan",
+                {
+                    "code_files": [
+                        {
+                            "filename": "hello_world.py",
+                            "content": "def hello(): print('Hello, World!')",
+                        }
+                    ]
+                },
+            )
+            print(results)
 ```
+
+> [!TIP]
+> Some client libraries want the `URL`: [http://localhost:8000/sse](http://localhost:8000/sse) 
+> and others only want the `HOST`: `localhost:8000`. 
+> Try it out the `URL` in a web browser to confirm the server is running and there are no network issues.
 
 See [offical SDK docs](https://modelcontextprotocol.io/clients#adding-mcp-support-to-your-application) for more info.
 

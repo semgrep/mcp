@@ -984,7 +984,7 @@ wheels = [
 
 [[package]]
 name = "semgrep-mcp"
-version = "0.1.12"
+version = "0.1.13"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
