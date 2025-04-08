@@ -339,6 +339,8 @@ See [Windsurf docs](https://docs.windsurf.com/windsurf/mcp) for more info.
 
 ### Claude Desktop
 
+Here is a [short video](https://www.loom.com/share/f4440cbbb5a24149ac17cc7ddcd95cfa) showing Claude Desktop using this server to write a custom rule.
+
 Add the following JSON block to your `claude_desktop_config.json` file:
 
 ```json
