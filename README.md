@@ -181,15 +181,15 @@ $ semgrep-mcp --help
 
 Usage: semgrep-mcp [OPTIONS]
 
- Entry point for the MCP server
+  Entry point for the MCP server
 
- Supports both stdio and sse transports. For stdio, it will read from stdin
- and write to stdout. For sse, it will start an HTTP server on port 8000.
+  Supports both stdio and sse transports. For stdio, it will read from stdin
+  and write to stdout. For sse, it will start an HTTP server on port 8000.
 
 Options:
- -v, --version                Show version and exit.
- -t, --transport [stdio|sse]  Transport protocol to use (stdio or sse)
- -h, --help                   Show this message and exit.
+  -v, --version                Show version and exit.
+  -t, --transport [stdio|sse]  Transport protocol to use (stdio or sse)
+  -h, --help                   Show this message and exit.
 ```
 
 ### Standard Input/Output (stdio)
