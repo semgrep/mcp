@@ -1,11 +1,10 @@
 import os
-import tempfile
 import shutil
+import tempfile
 
 import pytest
 
-from semgrep_mcp.server import safe_join, create_temp_files_from_code_content, CodeFile
-from semgrep_mcp.server import McpError
+from semgrep_mcp.server import CodeFile, McpError, create_temp_files_from_code_content, safe_join
 
 
 def test_safe_join_valid_paths():
@@ -109,7 +108,7 @@ def test_create_temp_files_from_code_content():
         for code_file in code_files:
             file_path = os.path.join(temp_dir, code_file.filename)
             assert os.path.exists(file_path)
-            with open(file_path, "r") as f:
+            with open(file_path) as f:
                 content = f.read()
                 assert content == code_file.content
 
@@ -178,7 +177,7 @@ def test_create_temp_files_from_code_content_empty_filename():
         # The valid file should be created
         valid_file_path = os.path.join(temp_dir, "valid_file.txt")
         assert os.path.exists(valid_file_path)
-        with open(valid_file_path, "r") as f:
+        with open(valid_file_path) as f:
             content = f.read()
             assert content == "This is valid content"
 
