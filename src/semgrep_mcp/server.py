@@ -83,7 +83,7 @@ def safe_join(base_dir: str, untrusted_path: str) -> str:
 
     # Handle empty path, current directory, or paths with only slashes
     if not untrusted_path or untrusted_path == "." or untrusted_path.strip("/") == "":
-        return base_dir
+        return base_dir.as_posix()
 
     # Join and normalize the untrusted path
     full_path = base_dir / Path(untrusted_path)
