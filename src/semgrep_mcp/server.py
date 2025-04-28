@@ -79,14 +79,14 @@ class SemgrepScanResult(BaseModel):
 
 def safe_join(base_dir: str, untrusted_path: str) -> str:
     # Absolute, normalized path to the base directory
-    base_dir = Path(base_dir).resolve()
+    base_path = Path(base_dir).resolve()
 
     # Handle empty path, current directory, or paths with only slashes
     if not untrusted_path or untrusted_path == "." or untrusted_path.strip("/") == "":
-        return base_dir.as_posix()
+        return base_path.as_posix()
 
     # Join and normalize the untrusted path
-    full_path = base_dir / Path(untrusted_path)
+    full_path = base_path / Path(untrusted_path)
 
     # Ensure the final path doesn't escape the base directory
     if not full_path == full_path.resolve():
