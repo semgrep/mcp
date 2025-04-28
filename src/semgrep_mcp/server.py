@@ -92,7 +92,7 @@ def safe_join(base_dir: str, untrusted_path: str) -> str:
     if not full_path == full_path.resolve():
         raise ValueError(f"Untrusted path escapes the base directory!: {untrusted_path}")
 
-    return full_path
+    return full_path.as_posix()
 
 
 # Path validation
