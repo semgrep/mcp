@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import tempfile
 from typing import Any
+from pathlib import Path
 
 import click
 import httpx
@@ -78,25 +79,20 @@ class SemgrepScanResult(BaseModel):
 
 def safe_join(base_dir: str, untrusted_path: str) -> str:
     # Absolute, normalized path to the base directory
-    base_dir = os.path.abspath(base_dir)
+    base_dir = Path(base_dir).resolve()
 
     # Handle empty path, current directory, or paths with only slashes
     if not untrusted_path or untrusted_path == "." or untrusted_path.strip("/") == "":
         return base_dir
 
     # Join and normalize the untrusted path
-    full_path = os.path.abspath(os.path.join(base_dir, untrusted_path))
+    full_path = base_dir / Path(untrusted_path)
 
-    # Ensure the final path is still within the base directory
-    if not full_path.startswith(base_dir + os.sep):
+    # Ensure the final path doesn't escape the base directory
+    if not full_path == full_path.resolve():
         raise ValueError(f"Untrusted path escapes the base directory!: {untrusted_path}")
 
     return full_path
-
-
-def common_base_dir(file_paths: list[str]) -> str:
-    dirs = [os.path.dirname(p) for p in file_paths]
-    return os.path.commonpath(dirs)
 
 
 # Path validation
@@ -114,7 +110,7 @@ def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
     normalized_path = os.path.normpath(path_to_validate)
 
     # Check if normalized path is still absolute
-    if not os.path.isabs(normalized_path):
+    if not Path(normalized_path).resolve() == Path(normalized_path):
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
@@ -249,21 +245,13 @@ def create_temp_files_from_code_content(code_files: list[CodeFile]) -> str:
         # Create a temporary directory
         temp_dir = tempfile.mkdtemp(prefix="semgrep_scan_")
 
-        # if given a list of files, with absolute paths, find the common base dir
-        paths = [file_info.filename for file_info in code_files]
-        base_dir = common_base_dir(paths)
-
         # Create files in the temporary directory
         for file_info in code_files:
             filename = file_info.filename
             if not filename:
                 continue
 
-            if base_dir:
-                relative_path = os.path.relpath(filename, base_dir)
-                temp_file_path = safe_join(temp_dir, relative_path)
-            else:
-                temp_file_path = safe_join(temp_dir, filename)
+            temp_file_path = safe_join(temp_dir, filename)
 
             try:
                 # Create subdirectories if needed
@@ -335,6 +323,13 @@ def validate_code_files(code_files: list[CodeFile]) -> None:
         raise McpError(
             ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
         ) from e
+    for file in code_files:
+        if os.path.isabs(file.filename):
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS, message="code_files.filename must be a relative path"
+                )
+            )
 
 
 async def run_semgrep(args: list[str]) -> str:
