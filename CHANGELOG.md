@@ -1,8 +1,12 @@
 # Changelog
 
-## [unreleased] - [see changes](https://github.com/semgrep/mcp/compare/v0.1.13...HEAD)
+## [unreleased] - [see changes](https://github.com/semgrep/mcp/compare/v0.2.0...HEAD)
 
 - Resources [See README](README.md#resources)
+
+## [0.2.0] - 2025-04-28
+
+- fix potential path traversal `safe_join`
 
 ## [0.1.13] - 2025-04-07
 
