@@ -78,12 +78,25 @@ class SemgrepScanResult(BaseModel):
 
 
 def safe_join(base_dir: str, untrusted_path: str) -> str:
+    """
+    Joins a base directory with an untrusted relative path and ensures the final path
+    doesn't escape the base directory.
+
+    Args:
+        base_dir: The base directory to join the untrusted path to
+        untrusted_path: The untrusted relative path to join to the base directory
+    """
     # Absolute, normalized path to the base directory
     base_path = Path(base_dir).resolve()
 
     # Handle empty path, current directory, or paths with only slashes
     if not untrusted_path or untrusted_path == "." or untrusted_path.strip("/") == "":
         return base_path.as_posix()
+
+    # Ensure untrusted path is not absolute
+    # This is soft validation, path traversal is checked later
+    if os.path.isabs(untrusted_path):
+        raise ValueError("Untrusted path must be relative")
 
     # Join and normalize the untrusted path
     full_path = base_path / Path(untrusted_path)

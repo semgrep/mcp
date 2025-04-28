@@ -40,7 +40,7 @@ def test_safe_join_path_traversal_attempts():
         safe_join(base_dir, "subdir/../../file.txt")
 
     # Test absolute path attempt
-    with pytest.raises(ValueError, match="Untrusted path escapes the base directory!"):
+    with pytest.raises(ValueError, match="Untrusted path must be relative"):
         safe_join(base_dir, "/etc/passwd")
 
     # Test complex traversal with current directory references
