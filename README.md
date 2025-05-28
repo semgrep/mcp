@@ -104,9 +104,13 @@ Always scan code generated using Semgrep for security vulnerabilities
 ### Hosted Server
 
 > [!WARNING]
-> This is an experimental server that may break. Once the MCP spec gains support for HTTP Streaming and OAuth in the near future, it will gain new functionality. 🚀
+> This is an experimental server that may break unexpectedly. It will rapidly gain new functionality. 🚀
 
-`mcp.json`
+#### Cursor
+1. **Cmd + Shift + J** to open Cursor Settings
+1. Select **MCP**
+1. Select **Add new global MCP server**.
+1.
 
 ```json
 {
