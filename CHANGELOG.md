@@ -1,4 +1,7 @@
 # Changelog
+## [0.2.1] - 2025-05-29
+
+
 
 ## [unreleased] - [see changes](https://github.com/semgrep/mcp/compare/v0.2.0...HEAD)
 
