@@ -107,6 +107,7 @@ Always scan code generated using Semgrep for security vulnerabilities
 > This is an experimental server that may break unexpectedly. It will rapidly gain new functionality. 🚀
 
 #### Cursor
+
 1. **Cmd + Shift + J** to open Cursor Settings
 1. Select **MCP**
 1. Select **Add new global MCP server**.
@@ -228,19 +229,19 @@ docker run -p 8000:0000 ghcr.io/semgrep/mcp
 Optionally, to connect to Semgrep AppSec Platform:
 
 1. [Login](https://semgrep.dev/login/) or sign up
-2. Generate a token from [Settings](https://semgrep.dev/orgs/-/settings/tokens/api)
-3. Add the token to your environment variables:
+1. Generate a token from [Settings](https://semgrep.dev/orgs/-/settings/tokens/api)
+1. Add the token to your environment variables:
    - CLI (`export SEMGREP_APP_TOKEN=<token>`)
 
    - Docker (`docker run -e SEMGREP_APP_TOKEN=<token>`)
 
    - MCP config JSON
 
- ```json
-     "env": {
-       "SEMGREP_APP_TOKEN": "<token>"
-     }
- ```
+```json
+    "env": {
+      "SEMGREP_APP_TOKEN": "<token>"
+    }
+```
 
 > [!TIP]
 > Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed. ☎️
@@ -431,7 +432,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more info and details on how to run f
 
 - [Glama](https://glama.ai/mcp/servers/@semgrep/mcp)
 
- <a href="https://glama.ai/mcp/servers/4iqti5mgde">
+<a href="https://glama.ai/mcp/servers/4iqti5mgde">
  <img width="380" height="200" src="https://glama.ai/mcp/servers/4iqti5mgde/badge" alt="Semgrep Server MCP server" />
  </a>
 

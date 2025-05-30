@@ -93,17 +93,16 @@ By default, the MCP server runs on `http://localhost:8000` with the inspector se
 
 1. Merge the release in to `main`.
 
-2. Tag the release with `git tag -a vX.Y.Z -m "vX.Y.Z"`.
+1. Tag the release with `git tag -a vX.Y.Z -m "vX.Y.Z"`.
 
-3. Verify the builds are green.
+1. Verify the builds are green.
 
-4. Push the tag:
+1. Push the tag:
 
    ```bash
    git push origin vX.Y.Z
    ```
 
-5. Manually approve the [`publish.yaml`](https://github.com/semgrep/mcp/actions/workflows/publish.yml) workflow.
+1. Manually approve the [`publish.yaml`](https://github.com/semgrep/mcp/actions/workflows/publish.yml) workflow.
 
-6. Verify the release looks good on [PyPI](https://pypi.org/p/semgrep-mcp).
-1. Verify the release looks good on [PyPI](https://pypi.org/p/semgrep-mcp)
+1. Verify the release looks good on [PyPI](https://pypi.org/p/semgrep-mcp).
