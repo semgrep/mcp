@@ -40,5 +40,8 @@ USER app
 
 EXPOSE 8000
 
+# expose the server to the outside world otherwise it will only be accessible from inside the container
+ENV FASTMCP_HOST=0.0.0.0
+
 ENTRYPOINT ["semgrep-mcp"]
 CMD ["-t", "sse"]
