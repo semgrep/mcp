@@ -254,6 +254,7 @@ def create_temp_files_from_code_content(code_files: list[CodeFile]) -> str:
     Raises:
         McpError: If there are issues creating or writing to files
     """
+    temp_dir = None
     try:
         # Create a temporary directory
         temp_dir = tempfile.mkdtemp(prefix="semgrep_scan_")
@@ -283,7 +284,7 @@ def create_temp_files_from_code_content(code_files: list[CodeFile]) -> str:
 
         return temp_dir
     except Exception as e:
-        if "temp_dir" in locals():
+        if temp_dir is not None:
             # Clean up temp directory if creation failed
             shutil.rmtree(temp_dir, ignore_errors=True)
         raise McpError(
@@ -481,6 +482,7 @@ async def semgrep_scan_with_custom_rule(
     """
     # Validate code_files
     validate_code_files(code_files)
+    temp_dir = None
     try:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
@@ -508,7 +510,7 @@ async def semgrep_scan_with_custom_rule(
         ) from e
 
     finally:
-        if "temp_dir" in locals():
+        if temp_dir is not None:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -531,6 +533,7 @@ async def semgrep_scan(
     # Validate code_files
     validate_code_files(code_files)
 
+    temp_dir = None
     try:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
@@ -552,7 +555,7 @@ async def semgrep_scan(
         ) from e
 
     finally:
-        if "temp_dir" in locals():
+        if temp_dir is not None:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -584,6 +587,7 @@ Here are the details of the security issues found:
     {details}
 </security-issues>
 """
+    temp_dir = None
     try:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
@@ -612,7 +616,7 @@ Here are the details of the security issues found:
         ) from e
 
     finally:
-        if "temp_dir" in locals():
+        if temp_dir is not None:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -632,6 +636,8 @@ async def get_abstract_syntax_tree(
       - see what a parser sees in the code
     """
 
+    temp_dir = None
+    temp_file_path = None
     try:
         # Create temporary directory and file for AST generation
         temp_dir = tempfile.mkdtemp(prefix="semgrep_ast_")
@@ -668,9 +674,9 @@ async def get_abstract_syntax_tree(
         raise McpError(
             ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
         ) from e
+
     finally:
-        if "temp_dir" in locals():
-            # Clean up temporary files
+        if temp_dir is not None:
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 

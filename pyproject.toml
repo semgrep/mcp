@@ -57,7 +57,7 @@ semgrep-mcp = "semgrep_mcp.server:main"
 dev-dependencies = [
     "mcp[cli]>=1.9.2",
     "ruff>=0.11.4",
-    "mypy>=1.15.0",
+    "pyright>=1.1.357",
     "pytest>=8.1.1",
     "tomli>=2.0.1",
     "tomli-w>=1.0.0",
@@ -93,20 +93,6 @@ split-on-trailing-comma = true
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10
-
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = true
-check_untyped_defs = true
-ignore_missing_imports = true
-strict_optional = true
-no_implicit_optional = true
-warn_redundant_casts = true
-warn_unused_ignores = true
-warn_no_return = true
-warn_unreachable = true
 
 [tool.hatch.build.targets.wheel]
 packages = [

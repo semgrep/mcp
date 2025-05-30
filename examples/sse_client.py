@@ -3,6 +3,7 @@ import json
 
 from mcp.client.session import ClientSession
 from mcp.client.sse import sse_client
+from mcp.types import TextContent
 
 
 async def main():
@@ -30,7 +31,10 @@ async def main():
             print(results)
             print("\n\nPretty-printed result from semgrep_scan:")
             print("=" * 80)
-            print(json.dumps(json.loads(results.content[0].text), indent=2))
+            if isinstance(results.content[0], TextContent):
+                print(json.dumps(json.loads(results.content[0].text), indent=2))
+            else:
+                print(f"First content is not TextContent: {type(results.content[0])}")
             print("\n\n")
             print("Hope that was helpful!")
 
