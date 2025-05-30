@@ -1,6 +1,7 @@
 # Changelog
 ## [0.2.1] - 2025-05-29
 
+- Updated `mcp` dependancy to `1.9.2` which changes the default host in SSE mode from `0.0.0.0` to `127,0,0,1`
 
 
 ## [unreleased] - [see changes](https://github.com/semgrep/mcp/compare/v0.2.0...HEAD)
