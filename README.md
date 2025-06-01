@@ -51,6 +51,7 @@ A Model Context Protocol (MCP) server for using [Semgrep](https://semgrep.dev) t
   - [Resources](#resources)
 - [Usage](#usage)
   - [Standard Input/Output (stdio)](#standard-inputoutput-stdio)
+  - [HTTP Streamable](#http-streamable)
   - [Server-Sent Events (SSE)](#server-sent-events-sse)
 - [Semgrep AppSec Platform](#semgrep-appsec-platform)
 - [Integrations](#integrations)
@@ -117,7 +118,8 @@ Always scan code generated using Semgrep for security vulnerabilities
 {
   "mcpServers": {
     "semgrep": {
-      "url": "https://mcp.semgrep.ai/sse"
+      "type": "streamable-http",
+      "url": "https://mcp.semgrep.ai/mcp/"
     }
   }
 }

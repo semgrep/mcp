@@ -802,21 +802,25 @@ async def get_semgrep_rule_yaml(rule_id: str = RULE_ID_FIELD) -> str:
 @click.option(
     "-t",
     "--transport",
-    type=click.Choice(["stdio", "sse"]),
+    type=click.Choice(["stdio", "streamable-http", "sse"]),
     default="stdio",
     envvar="MCP_TRANSPORT",
-    help="Transport protocol to use (stdio or sse)",
+    help="Transport protocol to use: stdio, streamable-http, or sse (legacy)",
 )
 def main(transport: str) -> None:
     """Entry point for the MCP server
 
-    Supports both stdio and sse transports. For stdio, it will read from stdin and write to stdout.
-    For sse, it will start an HTTP server on port 8000.
+    Supports stdio, streamable-http, and sse transports. For stdio, it will read from stdin and write to stdout.
+    For streamable-http and sse, it will start an HTTP server on port 8000.
     """
     if transport == "stdio":
         mcp.run(transport="stdio")
-    else:  # sse
+    elif transport == "streamable-http":
+        mcp.run(transport="streamable-http")
+    elif transport == "sse":
         mcp.run(transport="sse")
+    else:
+        raise ValueError(f"Invalid transport: {transport}")
 
 
 if __name__ == "__main__":

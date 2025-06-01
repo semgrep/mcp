@@ -44,4 +44,4 @@ EXPOSE 8000
 ENV FASTMCP_HOST=0.0.0.0
 
 ENTRYPOINT ["semgrep-mcp"]
-CMD ["-t", "sse"]
+CMD ["-t", "streamable-http"]
