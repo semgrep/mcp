@@ -51,7 +51,7 @@ A Model Context Protocol (MCP) server for using [Semgrep](https://semgrep.dev) t
   - [Resources](#resources)
 - [Usage](#usage)
   - [Standard Input/Output (stdio)](#standard-inputoutput-stdio)
-  - [HTTP Streamable](#http-streamable)
+  - [Streamable HTTP](#streamable-http)
   - [Server-Sent Events (SSE)](#server-sent-events-sse)
 - [Semgrep AppSec Platform](#semgrep-appsec-platform)
 - [Integrations](#integrations)
@@ -105,7 +105,7 @@ Always scan code generated using Semgrep for security vulnerabilities
 ### Hosted Server
 
 > [!WARNING]
-> This is an experimental server that may break unexpectedly. It will rapidly gain new functionality. 🚀
+> [mcp.semgrep.ai](https://mcp.semgrep.ai) is an experimental server that may break unexpectedly. It will rapidly gain new functionality.🚀
 
 #### Cursor
 
@@ -119,7 +119,7 @@ Always scan code generated using Semgrep for security vulnerabilities
   "mcpServers": {
     "semgrep": {
       "type": "streamable-http",
-      "url": "https://mcp.semgrep.ai/mcp/"
+      "url": "https://mcp.semgrep.ai/mcp"
     }
   }
 }
@@ -206,11 +206,35 @@ docker run -i --rm ghcr.io/semgrep/mcp -t stdio
 
 By default, the Docker container is in `SSE` mode, so you will have to include `-t stdio` after the image name and run with `-i` to run in [interactive](https://docs.docker.com/reference/cli/docker/container/run/#interactive) mode.
 
+### Streamable HTTP
+
+Streamable HTTP enables streaming responses over JSON RPC via HTTP POST requests. See the [spec](https://modelcontextprotocol.io/specification/draft/basic/transports#streamable-http) for more details.
+
+By default, the server listens on [127.0.0.1:8000/mcp](https://127.0.0.1/mcp) for client connections. To change any of this, set [FASTMCP\_\*](https://github.com/modelcontextprotocol/python-sdk/blob/main/src/mcp/server/fastmcp/server.py#L78) environment variables. _The server must be running for clients to connect to it._
+
+#### Python
+
+```bash
+semgrep-mcp -t streamable-http
+```
+
+By default, the Python package will run in `stdio` mode, so you will have to include `-t streamable-http`.
+
+#### Docker
+
+```
+docker run -p 8000:0000 ghcr.io/semgrep/mcp
+```
+
+
 ### Server-sent events (SSE)
 
-SSE transport enables server-to-client streaming with HTTP POST requests for client-to-server communication. See the [spec](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse) for more details.
+> [!WARNING]
+> The MCP communiity considers this a legacy transport portcol and is really intended for backwards compatibility. [Streamable HTTP](#streamable-http) is the recommended replacement.
 
-By default, the server listens on [0.0.0.0:8000/sse](https://127.0.0.1/sse) for client connections. To change any of this, set [FASTMCP\_\*](https://github.com/modelcontextprotocol/python-sdk/blob/main/src/mcp/server/fastmcp/server.py#L63) environment variables. _The server must be running for clients to connect to it._
+SSE transport enables server-to-client streaming with Server-Send Events for client-to-server and server-to-client communication. See the [spec](https://modelcontextprotocol.io/docs/concepts/transports#server-sent-events-sse) for more details.
+
+By default, the server listens on [127.0.0.1:8000/sse](https://127.0.0.1/sse) for client connections. To change any of this, set [FASTMCP\_\*](https://github.com/modelcontextprotocol/python-sdk/blob/main/src/mcp/server/fastmcp/server.py#L78) environment variables. _The server must be running for clients to connect to it._
 
 #### Python
 
@@ -223,7 +247,7 @@ By default, the Python package will run in `stdio` mode, so you will have to inc
 #### Docker
 
 ```
-docker run -p 8000:0000 ghcr.io/semgrep/mcp
+docker run -p 8000:0000 ghcr.io/semgrep/mcp -t sse
 ```
 
 ## Semgrep AppSec Platform
