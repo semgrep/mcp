@@ -50,7 +50,7 @@ if __name__ == "__main__":
     print("Hello!")
     print("First, make sure the HTTP Streamable MCP server is listening on port 8000.")
     print("One way you can run it is with:\n")
-    print("\tdocker run -p 8000:8000 ghcr.io/semgrep/mcp:latest -t http-streamable\n")
+    print("\tdocker run -p 8000:8000 ghcr.io/semgrep/mcp:latest -t streamable-http\n")
     print("in another tab in the terminal.")
     print("Now try running the HTTP Streamable client:")
     print("=" * 80)

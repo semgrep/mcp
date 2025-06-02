@@ -810,7 +810,8 @@ async def get_semgrep_rule_yaml(rule_id: str = RULE_ID_FIELD) -> str:
 def main(transport: str) -> None:
     """Entry point for the MCP server
 
-    Supports stdio, streamable-http, and sse transports. For stdio, it will read from stdin and write to stdout.
+    Supports stdio, streamable-http, and sse transports.
+    For stdio, it will read from stdin and write to stdout.
     For streamable-http and sse, it will start an HTTP server on port 8000.
     """
     if transport == "stdio":
