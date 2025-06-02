@@ -2,12 +2,12 @@ import asyncio
 import json
 
 from mcp.client.session import ClientSession
-from mcp.client.streamable_http import streamable_http_client
+from mcp.client.streamable_http import streamablehttp_client
 from mcp.types import TextContent
 
 
 async def main():
-    async with streamable_http_client("http://localhost:8000/mcp") as (
+    async with streamablehttp_client("http://localhost:8000/mcp") as (
         read_stream,
         write_stream,
         _
