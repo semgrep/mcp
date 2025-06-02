@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "semgrep-mcp"
-version = "0.2.1"
+version = "0.3.0"
 description = "MCP Server for using Semgrep to scan code"
 readme = "README.md"
 changelog = "CHANGELOG.md"
@@ -59,6 +59,7 @@ dev-dependencies = [
     "ruff>=0.11.4",
     "mypy>=1.15.0",
     "pytest>=8.1.1",
+    "pytest-asyncio>=0.23.0",
     "tomli>=2.0.1",
     "tomli-w>=1.0.0",
 ]
