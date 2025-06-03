@@ -59,6 +59,7 @@ A Model Context Protocol (MCP) server for using [Semgrep](https://semgrep.dev) t
   - [VS Code / Copilot](#vs-code--copilot)
   - [Windsurf](#windsurf)
   - [Claude Desktop](#claude-desktop)
+  - [Claude Code](#claude-code)
   - [OpenAI](#openai)
   - [Write your own](#custom-clients)
 - [Contributing, Community, and Running From Source](#contributing-community-and-running-from-source)
