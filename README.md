@@ -387,6 +387,14 @@ Add the following JSON block to your `claude_desktop_config.json` file:
 
 See [Anthropic docs](https://docs.anthropic.com/en/docs/agents-and-tools/mcp) for more info.
 
+### Claude Code
+
+```bash
+claude mcp add semgrep uvx semgrep-mcp
+```
+
+See [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code/tutorials#set-up-model-context-protocol-mcp) for more info.
+
 ### OpenAI
 
 ```python
