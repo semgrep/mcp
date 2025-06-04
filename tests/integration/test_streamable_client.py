@@ -9,18 +9,18 @@ from mcp.client.streamable_http import streamablehttp_client
 
 base_url = os.getenv("MCP_BASE_URL", "http://127.0.0.1:8000")
 
+
 @pytest.fixture(scope="module")
 def streamable_server():
     # Start the streamable-http server
-    proc = subprocess.Popen([
-        "python", "src/semgrep_mcp/server.py", "-t", "streamable-http"
-    ])
+    proc = subprocess.Popen(["python", "src/semgrep_mcp/server.py", "-t", "streamable-http"])
     # Wait briefly to ensure the server starts
     time.sleep(2)
     yield
     # Teardown: terminate the server
     proc.terminate()
     proc.wait()
+
 
 @pytest.mark.asyncio
 async def test_streamable_client_smoke(streamable_server):
