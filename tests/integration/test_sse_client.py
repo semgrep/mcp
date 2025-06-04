@@ -11,18 +11,18 @@ base_url = os.getenv("MCP_BASE_URL", "http://127.0.0.1:8000")
 
 print(f"MCP_BASE_URL: {base_url}")
 
+
 @pytest.fixture(scope="module")
 def sse_server():
     # Start the SSE server
-    proc = subprocess.Popen([
-        "python", "src/semgrep_mcp/server.py", "-t", "sse"
-    ])
+    proc = subprocess.Popen(["python", "src/semgrep_mcp/server.py", "-t", "sse"])
     # Wait briefly to ensure the server starts
     time.sleep(2)
     yield
     # Teardown: terminate the server
     proc.terminate()
     proc.wait()
+
 
 @pytest.mark.asyncio
 async def test_sse_client_smoke(sse_server):

@@ -11,6 +11,7 @@ server_params = StdioServerParameters(
     env=None,  # Optional environment variables
 )
 
+
 @pytest.mark.asyncio
 async def test_stdio_client():
     async with stdio_client(server_params) as (read, write):

@@ -570,7 +570,7 @@ async def security_check(
       - double check that code is secure before committing
       - get a second opinion on code security
 
-    If there are any issues found, you **MUST** fix them or offer to fix them and explain to the user why it's important to fix. 
+    If there are any issues found, you **MUST** fix them or offer to fix them and explain to the user why it's important to fix.
     If there are no issues, you can be reasonably confident that the code is secure.
     """
     # Validate code_files
