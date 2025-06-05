@@ -412,6 +412,12 @@ See [Claude Code docs](https://docs.anthropic.com/en/docs/claude-code/tutorials#
 
 ### OpenAI
 
+See the offical docs:
+- https://platform.openai.com/docs/mcp
+- https://platform.openai.com/docs/guides/tools-remote-mcp
+
+#### Agents SDK
+
 ```python
 async with MCPServerStdio(
     params={
