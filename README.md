@@ -80,7 +80,6 @@ docker run -i --rm ghcr.io/semgrep/mcp -t stdio
 ```
 
 ### Cursor
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.png)](cursor://anysphere.cursor-deeplink/mcp/install?name=semgrep&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJzZW1ncmVwLW1jcCJdfQ==)
 
 Example [`mcp.json`](https://docs.cursor.com/context/model-context-protocol)
 
@@ -111,7 +110,6 @@ Always scan code generated using Semgrep for security vulnerabilities
 > [mcp.semgrep.ai](https://mcp.semgrep.ai) is an experimental server that may break unexpectedly. It will rapidly gain new functionality.🚀
 
 #### Cursor
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.png)](cursor://anysphere.cursor-deeplink/mcp/install?name=semgrep&config=eyJ0eXBlIjoic3RyZWFtYWJsZS1odHRwIiwidXJsIjoiaHR0cHM6Ly9tY3Auc2VtZ3JlcC5haS9tY3AifQ==)
 
 1. **Cmd + Shift + J** to open Cursor Settings
 1. Select **MCP Tools**
@@ -279,8 +277,6 @@ Optionally, to connect to Semgrep AppSec Platform:
 ## Integrations
 
 ### Cursor IDE
-
-[![Install MCP Server](https://cursor.com/deeplink/mcp-install-dark.png)](cursor://anysphere.cursor-deeplink/mcp/install?name=semgrep&config=eyJjb21tYW5kIjoidXZ4IiwiYXJncyI6WyJzZW1ncmVwLW1jcCJdfQ==)
 
 Add the following JSON block to your `~/.cursor/mcp.json` global or `.cursor/mcp.json` project-specific configuration file:
 
