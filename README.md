@@ -44,6 +44,7 @@ A Model Context Protocol (MCP) server for using [Semgrep](https://semgrep.dev) t
 
 - [Getting Started](#getting-started)
   - [Cursor](#cursor)
+  - [ChatGPT](#chatgpt)
   - [Hosted Server](#hosted-server)
 - [Demo](#demo)
 - [API](#api)
@@ -103,6 +104,18 @@ Add an instruction to your [`.cursor/rules`](https://docs.cursor.com/context/rul
 ```text
 Always scan code generated using Semgrep for security vulnerabilities
 ```
+
+### ChatGPT
+
+1. Go to the **Connector Settings** page ([direct link](https://chatgpt.com/admin/ca#settings/ConnectorSettings?create-connector=true))
+1. **Name** the connection `Semgrep`
+1. Set **MCP Server URL** to `https://mcp.semgrep.ai/sse`
+1. Set **Authentication** to `No authentication`
+1. Check the **I trust this application** checkbox
+1. Click **Create**
+
+See more details at the [official docs](https://platform.openai.com/docs/mcp).
+
 
 ### Hosted Server
 
