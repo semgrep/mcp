@@ -468,7 +468,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for more info and details on how to run f
 
 - [Glama](https://glama.ai/mcp/servers/@semgrep/mcp)
 
-<a href="https://glama.ai/mcp/servers/4iqti5mgde">
+<a href="https://glama.ai/mcp/servers/@semgrep/mcp">
  <img width="380" height="200" src="https://glama.ai/mcp/servers/4iqti5mgde/badge" alt="Semgrep Server MCP server" />
  </a>
 
