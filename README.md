@@ -285,7 +285,7 @@ Optionally, to connect to Semgrep AppSec Platform:
 ```
 
 > [!TIP]
-> Please reach out to [support@semgrep.com](mailto:support@semgrep.com) if needed. ☎️
+> Please [reach out for support](https://semgrep.dev/docs/support) if needed. ☎️
 
 ## Integrations
 
