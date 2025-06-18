@@ -516,7 +516,7 @@ async def get_deployment_slug() -> str:
 
 @mcp.tool()
 async def semgrep_findings(
-    issue_type: list[str] | None = ["sast"],
+    issue_type: list[str] | None = ["sast", "sac"],
     status: str | None = None,
     repos: list[str] | None = None,
     severities: list[str] | None = None,
