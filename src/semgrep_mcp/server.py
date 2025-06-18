@@ -448,75 +448,68 @@ async def get_supported_languages() -> list[str]:
 async def get_deployment_slug() -> str:
     """
     Fetches and caches the deployment slug from Semgrep API.
-    
+
     Returns:
         str: The deployment slug
-        
+
     Raises:
         McpError: If unable to fetch deployments or no deployments found
     """
     global DEPLOYMENT_SLUG
-    
+
     # Return cached value if available
     if DEPLOYMENT_SLUG:
         return DEPLOYMENT_SLUG
-    
+
     # Get API token
     api_token = os.environ.get("SEMGREP_API_TOKEN")
     if not api_token:
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
-                message="SEMGREP_API_TOKEN environment variable must be set to use this tool"
+                message="SEMGREP_API_TOKEN environment variable must be set to use this tool",
             )
         )
-    
+
     # Fetch deployments
     url = f"{SEMGREP_API_URL}/v1/deployments"
-    headers = {
-        "Authorization": f"Bearer {api_token}",
-        "Accept": "application/json"
-    }
-    
+    headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
+
     try:
         response = await http_client.get(url, headers=headers)
         response.raise_for_status()
         data = response.json()
-        
+
         # Extract deployment slug - assuming we want the first deployment
         deployments = data.get("deployments", [])
         if not deployments:
             raise McpError(
-                ErrorData(
-                    code=INTERNAL_ERROR,
-                    message="No deployments found for this API token"
-                )
+                ErrorData(code=INTERNAL_ERROR, message="No deployments found for this API token")
             )
-        
+
         # Cache the slug from the first deployment
         DEPLOYMENT_SLUG = deployments[0]["slug"]
         return DEPLOYMENT_SLUG
-        
+
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 401:
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS,
-                    message="Invalid API token. Please check your SEMGREP_API_TOKEN environment variable."
+                    message="Invalid API token. Please check your SEMGREP_API_TOKEN environment variable.",
                 )
             ) from e
         else:
             raise McpError(
                 ErrorData(
                     code=INTERNAL_ERROR,
-                    message=f"Error fetching deployments: {e.response.status_code} - {e.response.text}"
+                    message=f"Error fetching deployments: {e.response.status_code} - {e.response.text}",
                 )
             ) from e
     except Exception as e:
         raise McpError(
             ErrorData(
-                code=INTERNAL_ERROR,
-                message=f"Error fetching deployments from Semgrep: {e!s}"
+                code=INTERNAL_ERROR, message=f"Error fetching deployments from Semgrep: {e!s}"
             )
         ) from e
 
@@ -524,24 +517,54 @@ async def get_deployment_slug() -> str:
 @mcp.tool()
 async def semgrep_findings(
     issue_type: list[str] | None = ["sast"],
+    status: str | None = None,
+    repos: list[str] | None = None,
+    severities: list[str] | None = None,
+    confidence: list[str] | None = None,
+    autotriage_verdict: str | None = None,
+    page: int | None = None,
+    page_size: int = 100,
 ) -> list[Finding]:
     """
     Fetch findings (code or supply chain) from Semgrep's MCP Findings API.
     Automatically uses the first available deployment for the authenticated user.
 
     Args:
-        issue_type: Optional filter for finding type ('sast', 'sca', 'secrets').
-        config: Optional config parameter (unused).
+        issue_type: Optional filter for finding type ('sast', 'sca').
+        status: Set to 'open' to only pull in open findings which have not yet been fixed.
+        repos: Filter to the current repository to only retrieve findings for that repo.
+        severities: Filter to only retrieve findings of certain severities (e.g., ['critical']).
+        confidence: Filter to only retrieve findings of certain confidence levels (e.g., ['high']).
+        autotriage_verdict: Filter to only retrieve findings with a certain auto-triage verdict (e.g., 'true_positive').
+        page: Page number for pagination.
+        page_size: Number of findings per page (100-3000, default 100).
 
     Returns:
         list[Finding]: The findings from the Semgrep deployment.
     """
-    # Get deployment slug (will be fetched and cached automatically)
-    deployment = await get_deployment_slug()
-    
-    # Get API token from environment variable
-    api_token = os.environ.get("SEMGREP_API_TOKEN")
+    # We may want to rely offload validation to the server side eventually
+    # or implement a more robust validation system on the client side.
 
+    # Validate issue_type
+    allowed_issue_types = {"sast", "sca"}
+    if issue_type:
+        for t in issue_type:
+            if t not in allowed_issue_types:
+                raise McpError(
+                    ErrorData(
+                        code=INVALID_PARAMS,
+                        message=f"Invalid issue_type '{t}'. Allowed values are 'sast' and 'sca'.",
+                    )
+                )
+
+    # Validate page_size
+    if not (100 <= page_size <= 3000):
+        raise McpError(
+            ErrorData(code=INVALID_PARAMS, message="page_size must be between 100 and 3000.")
+        )
+
+    deployment = await get_deployment_slug()
+    api_token = os.environ.get("SEMGREP_API_TOKEN")
     if not api_token:
         raise McpError(
             ErrorData(
@@ -553,14 +576,30 @@ async def semgrep_findings(
     url = f"https://semgrep.dev/api/v1/deployments/{deployment}/findings"
     headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
 
-    params = {}
+    params: dict[str, Any] = {}
     if issue_type:
         params["issue_type"] = issue_type
+    if status:
+        params["status"] = status
+    if repos:
+        params["repos"] = repos
+    if severities:
+        params["severities"] = severities
+    if confidence:
+        params["confidence"] = confidence
+    if autotriage_verdict:
+        params["autotriage_verdict"] = autotriage_verdict
+    if page is not None:
+        params["page"] = page
+    if page_size is not None:
+        params["page_size"] = page_size
 
     try:
         response = await http_client.get(url, headers=headers, params=params)
         response.raise_for_status()
-        return response.json()
+        data = response.json()
+        # Validate and convert each finding to a Finding object
+        return [Finding.model_validate(finding) for finding in data.get("findings", [])]
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 401:
             raise McpError(
