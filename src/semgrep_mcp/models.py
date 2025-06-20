@@ -1,6 +1,7 @@
-from pydantic import BaseModel, HttpUrl, Field
-from typing import List, Optional, Any
 from datetime import datetime
+from typing import Any
+
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class CodeFile(BaseModel):
@@ -29,7 +30,7 @@ class ExternalTicket(BaseModel):
     external_slug: str
     url: HttpUrl
     id: int
-    linked_issue_ids: List[int]
+    linked_issue_ids: list[int]
 
 
 class ReviewComment(BaseModel):
@@ -61,10 +62,10 @@ class Rule(BaseModel):
     message: str
     confidence: str
     category: str
-    subcategories: List[str]
-    vulnerability_classes: List[str]
-    cwe_names: List[str]
-    owasp_names: List[str]
+    subcategories: list[str]
+    vulnerability_classes: list[str]
+    cwe_names: list[str]
+    owasp_names: list[str]
 
 
 class Autofix(BaseModel):
@@ -100,8 +101,8 @@ class Finding(BaseModel):
     first_seen_scan_id: int
     syntactic_id: str
     match_based_id: str
-    external_ticket: Optional[ExternalTicket] = None
-    review_comments: List[ReviewComment]
+    external_ticket: ExternalTicket | None = None
+    review_comments: list[ReviewComment]
     repository: Repository
     line_of_code_url: HttpUrl
     triage_state: str
@@ -109,16 +110,16 @@ class Finding(BaseModel):
     status: str
     severity: str
     confidence: str
-    categories: List[str]
+    categories: list[str]
     created_at: datetime
     relevant_since: datetime
     rule_name: str
     rule_message: str
     location: Location
-    sourcing_policy: Optional[SourcingPolicy] = None
-    triaged_at: Optional[datetime] = None
-    triage_comment: Optional[str] = None
-    triage_reason: Optional[str] = None
+    sourcing_policy: SourcingPolicy | None = None
+    triaged_at: datetime | None = None
+    triage_comment: str | None = None
+    triage_reason: str | None = None
     state_updated_at: datetime
     rule: Rule
-    assistant: Optional[Assistant] = None
+    assistant: Assistant | None = None

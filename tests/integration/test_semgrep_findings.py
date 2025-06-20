@@ -1,8 +1,9 @@
 import os
-import json
+
 import pytest
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
+
 from semgrep_mcp.models import Finding
 
 
@@ -26,7 +27,6 @@ async def test_semgrep_findings_sca():
 
             # Validate findings against the model
             for content in results.content:
-                finding = json.loads(content.text)
                 Finding.model_validate_json(content.text)
 
 
@@ -50,5 +50,4 @@ async def test_semgrep_findings_sast():
 
             # Validate findings against the model
             for content in results.content:
-                finding = json.loads(content.text)
                 Finding.model_validate_json(content.text)

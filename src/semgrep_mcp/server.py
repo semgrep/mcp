@@ -17,7 +17,8 @@ from mcp.types import (
     ErrorData,
 )
 from pydantic import Field, ValidationError
-from semgrep_mcp.models import CodeFile, CodeWithLanguage, SemgrepScanResult, Finding
+
+from semgrep_mcp.models import CodeFile, Finding, SemgrepScanResult
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -496,14 +497,14 @@ async def get_deployment_slug() -> str:
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS,
-                    message="Invalid API token. Please check your SEMGREP_API_TOKEN environment variable.",
+                    message="Invalid API token: check your SEMGREP_API_TOKEN environment variable.",
                 )
             ) from e
         else:
             raise McpError(
                 ErrorData(
                     code=INTERNAL_ERROR,
-                    message=f"Error fetching deployments: {e.response.status_code} - {e.response.text}",
+                    message=f"Error fetching deployments: {e.response.text}",
                 )
             ) from e
     except Exception as e:
@@ -516,7 +517,7 @@ async def get_deployment_slug() -> str:
 
 @mcp.tool()
 async def semgrep_findings(
-    issue_type: list[str] | None = ["sast", "sac"],
+    issue_type: list[str] | None = None,
     status: str | None = None,
     repos: list[str] | None = None,
     severities: list[str] | None = None,
@@ -535,29 +536,27 @@ async def semgrep_findings(
         repos: Filter to the current repository to only retrieve findings for that repo.
         severities: Filter to only retrieve findings of certain severities (e.g., ['critical']).
         confidence: Filter to only retrieve findings of certain confidence levels (e.g., ['high']).
-        autotriage_verdict: Filter to only retrieve findings with a certain auto-triage verdict (e.g., 'true_positive').
+        autotriage_verdict: Filter to only retrieve findings with a certain auto-triage verdict
+            (e.g., 'true_positive').
         page: Page number for pagination.
         page_size: Number of findings per page (100-3000, default 100).
 
     Returns:
         list[Finding]: The findings from the Semgrep deployment.
     """
-    # We may want to rely offload validation to the server side eventually
-    # or implement a more robust validation system on the client side.
-
-    # Validate issue_type
+    if issue_type is None:
+        issue_type = ["sast", "sca"]
     allowed_issue_types = {"sast", "sca"}
-    if issue_type:
-        for t in issue_type:
-            if t not in allowed_issue_types:
-                raise McpError(
-                    ErrorData(
-                        code=INVALID_PARAMS,
-                        message=f"Invalid issue_type '{t}'. Allowed values are 'sast' and 'sca'.",
-                    )
-                )
+    if not set(issue_type).issubset(allowed_issue_types):
+        invalid_types = ", ".join(set(issue_type) - allowed_issue_types)
+        raise McpError(
+            ErrorData(
+                code=INVALID_PARAMS,
+                message=f"Invalid issue_type(s): {invalid_types}. "
+                "Allowed values are 'sast' and 'sca'.",
+            )
+        )
 
-    # Validate page_size
     if not (100 <= page_size <= 3000):
         raise McpError(
             ErrorData(code=INVALID_PARAMS, message="page_size must be between 100 and 3000.")
@@ -576,36 +575,29 @@ async def semgrep_findings(
     url = f"https://semgrep.dev/api/v1/deployments/{deployment}/findings"
     headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
 
-    params: dict[str, Any] = {}
-    if issue_type:
-        params["issue_type"] = issue_type
-    if status:
-        params["status"] = status
-    if repos:
-        params["repos"] = repos
-    if severities:
-        params["severities"] = severities
-    if confidence:
-        params["confidence"] = confidence
-    if autotriage_verdict:
-        params["autotriage_verdict"] = autotriage_verdict
-    if page is not None:
-        params["page"] = page
-    if page_size is not None:
-        params["page_size"] = page_size
+    params_to_filter: dict[str, Any] = {
+        "issue_type": issue_type,
+        "status": status,
+        "repos": repos,
+        "severities": severities,
+        "confidence": confidence,
+        "autotriage_verdict": autotriage_verdict,
+        "page": page,
+        "page_size": page_size,
+    }
+    params = {k: v for k, v in params_to_filter.items() if v is not None}
 
     try:
         response = await http_client.get(url, headers=headers, params=params)
         response.raise_for_status()
         data = response.json()
-        # Validate and convert each finding to a Finding object
         return [Finding.model_validate(finding) for finding in data.get("findings", [])]
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 401:
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS,
-                    message="Invalid API token. Please check your SEMGREP_API_TOKEN environment variable.",
+                    message="Invalid API token: check your SEMGREP_API_TOKEN environment variable.",
                 )
             ) from e
         elif e.response.status_code == 404:
@@ -619,7 +611,7 @@ async def semgrep_findings(
             raise McpError(
                 ErrorData(
                     code=INTERNAL_ERROR,
-                    message=f"Error fetching findings: {e.response.status_code} - {e.response.text}",
+                    message=f"Error fetching findings: {e.response.text}",
                 )
             ) from e
     except ValidationError as e:
