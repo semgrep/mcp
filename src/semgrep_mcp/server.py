@@ -587,7 +587,8 @@ async def semgrep_findings(
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
-                message="SEMGREP_API_TOKEN environment variable must be set to use this tool. Create a token at semgrep.dev to continue.",
+                message="SEMGREP_API_TOKEN environment variable must be set to use this tool. "
+                "Create a token at semgrep.dev to continue.",
             )
         )
 
