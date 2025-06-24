@@ -42,29 +42,49 @@ A Model Context Protocol (MCP) server for using [Semgrep](https://semgrep.dev) t
 
 ## Contents
 
-- [Getting Started](#getting-started)
-  - [Cursor](#cursor)
-  - [ChatGPT](#chatgpt)
-  - [Hosted Server](#hosted-server)
-- [Demo](#demo)
-- [API](#api)
-  - [Tools](#tools)
-  - [Prompts](#prompts)
-  - [Resources](#resources)
-- [Usage](#usage)
-  - [Standard Input/Output (stdio)](#standard-inputoutput-stdio)
-  - [Streamable HTTP](#streamable-http)
-  - [Server-Sent Events (SSE)](#server-sent-events-sse)
-- [Semgrep AppSec Platform](#semgrep-appsec-platform)
-- [Integrations](#integrations)
-  - [Cursor IDE](#cursor-ide)
-  - [VS Code / Copilot](#vs-code--copilot)
-  - [Windsurf](#windsurf)
-  - [Claude Desktop](#claude-desktop)
-  - [Claude Code](#claude-code)
-  - [OpenAI](#openai)
-  - [Write your own](#custom-clients)
-- [Contributing, Community, and Running From Source](#contributing-community-and-running-from-source)
+- [Semgrep MCP Server](#semgrep-mcp-server)
+  - [Contents](#contents)
+  - [Getting started](#getting-started)
+    - [Cursor](#cursor)
+    - [ChatGPT](#chatgpt)
+    - [Hosted Server](#hosted-server)
+      - [Cursor](#cursor-1)
+  - [Demo](#demo)
+  - [API](#api)
+    - [Tools](#tools)
+      - [Scan Code](#scan-code)
+      - [Understand Code](#understand-code)
+      - [Cloud Platform (login and Semgrep token required)](#cloud-platform-login-and-semgrep-token-required)
+      - [Meta](#meta)
+    - [Prompts](#prompts)
+    - [Resources](#resources)
+  - [Usage](#usage)
+    - [Standard Input/Output (stdio)](#standard-inputoutput-stdio)
+      - [Python](#python)
+      - [Docker](#docker)
+    - [Streamable HTTP](#streamable-http)
+      - [Python](#python-1)
+      - [Docker](#docker-1)
+    - [Server-sent events (SSE)](#server-sent-events-sse)
+      - [Python](#python-2)
+      - [Docker](#docker-2)
+  - [Semgrep AppSec Platform](#semgrep-appsec-platform)
+  - [Integrations](#integrations)
+    - [Cursor IDE](#cursor-ide)
+    - [VS Code / Copilot](#vs-code--copilot)
+      - [Manual Configuration](#manual-configuration)
+      - [Using Docker](#using-docker)
+    - [Windsurf](#windsurf)
+    - [Claude Desktop](#claude-desktop)
+    - [Claude Code](#claude-code)
+    - [OpenAI](#openai)
+      - [Agents SDK](#agents-sdk)
+    - [Custom clients](#custom-clients)
+      - [Example Python SSE client](#example-python-sse-client)
+  - [Contributing, community, and running from source](#contributing-community-and-running-from-source)
+    - [Similar tools 🔍](#similar-tools-)
+    - [Community projects 🌟](#community-projects-)
+    - [MCP server registries](#mcp-server-registries)
 
 ## Getting started
 
@@ -159,6 +179,9 @@ Enable LLMs to perform actions, make deterministic computations, and interact wi
 #### Understand Code
 
 - `get_abstract_syntax_tree`: Output the Abstract Syntax Tree (AST) of code
+
+#### Cloud Platform (login and Semgrep token required)
+- `semgrep_findings`: Fetch Semgrep findings from the Semgrep AppSec Platform API
 
 #### Meta
 
