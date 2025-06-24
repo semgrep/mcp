@@ -16,7 +16,9 @@ from mcp.types import (
     INVALID_PARAMS,
     ErrorData,
 )
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import Field, ValidationError
+
+from semgrep_mcp.models import CodeFile, Finding, SemgrepScanResult
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -27,6 +29,7 @@ DEFAULT_TIMEOUT = 300  # 5 mins in seconds
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"
+SEMGREP_API_VERSION = "v1"
 
 # Field definitions for function parameters
 CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
@@ -45,31 +48,8 @@ RULE_ID_FIELD = Field(description="Semgrep rule ID")
 semgrep_executable: str | None = None
 _semgrep_lock = asyncio.Lock()
 
-# ---------------------------------------------------------------------------------
-# Data Models
-# ---------------------------------------------------------------------------------
-
-
-class CodeFile(BaseModel):
-    filename: str = Field(description="Relative path to the code file")
-    content: str = Field(description="Content of the code file")
-
-
-class CodeWithLanguage(BaseModel):
-    content: str = Field(description="Content of the code file")
-    language: str = Field(description="Programing language of the code file", default="python")
-
-
-class SemgrepScanResult(BaseModel):
-    version: str = Field(description="Version of Semgrep used for the scan")
-    results: list[dict[str, Any]] = Field(description="List of semgrep scan results")
-    errors: list[dict[str, Any]] = Field(
-        description="List of errors encountered during scan", default_factory=list
-    )
-    paths: dict[str, Any] = Field(description="Paths of the scanned files")
-    skipped_rules: list[str] = Field(
-        description="List of rules that were skipped during scan", default_factory=list
-    )
+# Global variable to cache deployment slug
+DEPLOYMENT_SLUG: str | None = None
 
 
 # ---------------------------------------------------------------------------------
@@ -464,6 +444,204 @@ async def get_supported_languages() -> list[str]:
     # Parse output and return list of languages
     languages = await run_semgrep(args)
     return [lang.strip() for lang in languages.strip().split("\n") if lang.strip()]
+
+
+async def get_deployment_slug() -> str:
+    """
+    Fetches and caches the deployment slug from Semgrep API.
+
+    Returns:
+        str: The deployment slug
+
+    Raises:
+        McpError: If unable to fetch deployments or no deployments found
+    """
+    global DEPLOYMENT_SLUG
+
+    # Return cached value if available
+    if DEPLOYMENT_SLUG:
+        return DEPLOYMENT_SLUG
+
+    # Get API token
+    api_token = os.environ.get("SEMGREP_API_TOKEN")
+    if not api_token:
+        raise McpError(
+            ErrorData(
+                code=INVALID_PARAMS,
+                message="SEMGREP_API_TOKEN environment variable must be set to use this tool",
+            )
+        )
+
+    # Fetch deployments
+    url = f"{SEMGREP_API_URL}/v1/deployments"
+    headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
+
+    try:
+        response = await http_client.get(url, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        # Extract deployment slug - assuming we want the first deployment
+        deployments = data.get("deployments", [])
+        if not deployments:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message="No deployments found for this API token")
+            )
+
+        # Cache the slug from the first deployment
+        DEPLOYMENT_SLUG = deployments[0]["slug"]
+        return DEPLOYMENT_SLUG
+
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 401:
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS,
+                    message="Invalid API token: check your SEMGREP_API_TOKEN environment variable.",
+                )
+            ) from e
+        else:
+            raise McpError(
+                ErrorData(
+                    code=INTERNAL_ERROR,
+                    message=f"Error fetching deployments: {e.response.text}",
+                )
+            ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(
+                code=INTERNAL_ERROR, message=f"Error fetching deployments from Semgrep: {e!s}"
+            )
+        ) from e
+
+
+@mcp.tool()
+async def semgrep_findings(
+    issue_type: list[str] | None = None,
+    status: str | None = None,
+    repos: list[str] | None = None,
+    severities: list[str] | None = None,
+    confidence: list[str] | None = None,
+    autotriage_verdict: str | None = None,
+    page: int | None = None,
+    page_size: int = 100,
+) -> list[Finding]:
+    """
+    Fetches findings from the Semgrep AppSec Platform Findings API.
+
+    This function retrieves security, code quality, and supply chain findings that have already been
+    identified by previous Semgrep scans and uploaded to the Semgrep AppSec platform. It does NOT
+    perform a new scan or analyze code directly. Instead, it queries the Semgrep API to access
+    historical scan results for a given repository or set of repositories.
+
+    Use this function when a prompt requests a summary, list, or analysis of existing findings,
+    such as:
+        - "Please list the top 10 security findings and propose solutions for them."
+        - "Show all open critical vulnerabilities in this repository."
+        - "Summarize the most recent Semgrep scan results."
+
+    This function is ideal for:
+    - Reviewing, listing, or summarizing findings from past scans.
+    - Providing actionable insights or remediation advice based on existing scan data.
+
+    Do NOT use this function to perform a new scan or check code that has not yet been analyzed by
+    Semgrep. For new scans, use the appropriate scanning function.
+
+    Args:
+        issue_type (Optional[List[str]]): Filter findings by type (e.g., ['sast'], ['sca']).
+        status (Optional[str]): Filter findings by status (e.g., 'open' for unresolved findings).
+        repos (Optional[List[str]]): List of repository names to filter results.
+        severities (Optional[List[str]]): Filter findings by severity (e.g., ['critical', 'high']).
+        confidence (Optional[List[str]]): Filter findings by confidence level (e.g., ['high']).
+        autotriage_verdict (Optional[str]): Filter findings by auto-triage verdict
+            (e.g., 'true_positive').
+        page (Optional[int]): Page number for paginated results.
+        page_size (int): Number of findings per page (default: 100, max: 3000).
+
+    Returns:
+        List[Finding]: A list of findings matching the specified filters, where each finding
+        contains details such as rule ID, description, severity, file location, and remediation
+        guidance if available.
+    """
+    if issue_type is None:
+        issue_type = ["sast", "sca"]
+    allowed_issue_types = {"sast", "sca"}
+    if not set(issue_type).issubset(allowed_issue_types):
+        invalid_types = ", ".join(set(issue_type) - allowed_issue_types)
+        raise McpError(
+            ErrorData(
+                code=INVALID_PARAMS,
+                message=f"Invalid issue_type(s): {invalid_types}. "
+                "Allowed values are 'sast' and 'sca'.",
+            )
+        )
+
+    if not (100 <= page_size <= 3000):
+        raise McpError(
+            ErrorData(code=INVALID_PARAMS, message="page_size must be between 100 and 3000.")
+        )
+
+    deployment = await get_deployment_slug()
+    api_token = os.environ.get("SEMGREP_API_TOKEN")
+    if not api_token:
+        raise McpError(
+            ErrorData(
+                code=INVALID_PARAMS,
+                message="SEMGREP_API_TOKEN environment variable must be set to use this tool. "
+                "Create a token at semgrep.dev to continue.",
+            )
+        )
+
+    url = f"https://semgrep.dev/api/v1/deployments/{deployment}/findings"
+    headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
+
+    params_to_filter: dict[str, Any] = {
+        "issue_type": issue_type,
+        "status": status,
+        "repos": repos,
+        "severities": severities,
+        "confidence": confidence,
+        "autotriage_verdict": autotriage_verdict,
+        "page": page,
+        "page_size": page_size,
+    }
+    params = {k: v for k, v in params_to_filter.items() if v is not None}
+
+    try:
+        response = await http_client.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+        return [Finding.model_validate(finding) for finding in data.get("findings", [])]
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 401:
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS,
+                    message="Invalid API token: check your SEMGREP_API_TOKEN environment variable.",
+                )
+            ) from e
+        elif e.response.status_code == 404:
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS,
+                    message=f"Deployment '{deployment}' not found or you don't have access to it.",
+                )
+            ) from e
+        else:
+            raise McpError(
+                ErrorData(
+                    code=INTERNAL_ERROR,
+                    message=f"Error fetching findings: {e.response.text}",
+                )
+            ) from e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error fetching findings from Semgrep: {e!s}")
+        ) from e
 
 
 @mcp.tool()
