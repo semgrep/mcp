@@ -530,8 +530,8 @@ async def semgrep_findings(
     Fetches findings from the Semgrep AppSec Platform Findings API.
 
     This function retrieves security, code quality, and supply chain findings that have already been
-    identified by previous Semgrep scans and uploaded to the Semgrep MCP platform. It does NOT
-    perform a new scan or analyze code directly. Instead, it queries the Semgrep MCP API to access
+    identified by previous Semgrep scans and uploaded to the Semgrep AppSec platform. It does NOT
+    perform a new scan or analyze code directly. Instead, it queries the Semgrep API to access
     historical scan results for a given repository or set of repositories.
 
     Use this function when a prompt requests a summary, list, or analysis of existing findings,
