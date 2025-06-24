@@ -527,22 +527,41 @@ async def semgrep_findings(
     page_size: int = 100,
 ) -> list[Finding]:
     """
-    Fetch findings (code or supply chain) from Semgrep's MCP Findings API.
-    Automatically uses the first available deployment for the authenticated user.
+    Fetches findings from Semgrep's MCP (Management Cloud Platform) Findings API.
+
+    This function retrieves security, code quality, and supply chain findings that have already been
+    identified by previous Semgrep scans and uploaded to the Semgrep MCP platform. It does NOT
+    perform a new scan or analyze code directly. Instead, it queries the Semgrep MCP API to access
+    historical scan results for a given repository or set of repositories.
+
+    Use this function when a prompt requests a summary, list, or analysis of existing findings,
+    such as:
+        - "Please list the top 10 security findings and propose solutions for them."
+        - "Show all open critical vulnerabilities in this repository."
+        - "Summarize the most recent Semgrep scan results."
+
+    This function is ideal for:
+    - Reviewing, listing, or summarizing findings from past scans.
+    - Providing actionable insights or remediation advice based on existing scan data.
+
+    Do NOT use this function to perform a new scan or check code that has not yet been analyzed by
+    Semgrep. For new scans, use the appropriate scanning function.
 
     Args:
-        issue_type: Optional filter for finding type ('sast', 'sca').
-        status: Set to 'open' to only pull in open findings which have not yet been fixed.
-        repos: Filter to the current repository to only retrieve findings for that repo.
-        severities: Filter to only retrieve findings of certain severities (e.g., ['critical']).
-        confidence: Filter to only retrieve findings of certain confidence levels (e.g., ['high']).
-        autotriage_verdict: Filter to only retrieve findings with a certain auto-triage verdict
+        issue_type (Optional[List[str]]): Filter findings by type (e.g., ['sast'], ['sca']).
+        status (Optional[str]): Filter findings by status (e.g., 'open' for unresolved findings).
+        repos (Optional[List[str]]): List of repository names to filter results.
+        severities (Optional[List[str]]): Filter findings by severity (e.g., ['critical', 'high']).
+        confidence (Optional[List[str]]): Filter findings by confidence level (e.g., ['high']).
+        autotriage_verdict (Optional[str]): Filter findings by auto-triage verdict
             (e.g., 'true_positive').
-        page: Page number for pagination.
-        page_size: Number of findings per page (100-3000, default 100).
+        page (Optional[int]): Page number for paginated results.
+        page_size (int): Number of findings per page (default: 100, max: 3000).
 
     Returns:
-        list[Finding]: The findings from the Semgrep deployment.
+        List[Finding]: A list of findings matching the specified filters, where each finding
+        contains details such as rule ID, description, severity, file location, and remediation
+        guidance if available.
     """
     if issue_type is None:
         issue_type = ["sast", "sca"]
