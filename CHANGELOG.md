@@ -1,4 +1,8 @@
 # Changelog
+## [0.4.0] - 2025-06-24
+
+- Add `semgrep_findings` tool
+
 ## [0.3.0] - 2025-06-01
 
 - Add support for `streamable-http` mode

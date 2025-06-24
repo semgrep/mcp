@@ -24,7 +24,7 @@ from semgrep_mcp.models import CodeFile, Finding, SemgrepScanResult
 # Constants
 # ---------------------------------------------------------------------------------
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 DEFAULT_TIMEOUT = 300  # 5 mins in seconds
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
