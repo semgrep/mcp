@@ -527,7 +527,7 @@ async def semgrep_findings(
     page_size: int = 100,
 ) -> list[Finding]:
     """
-    Fetches findings from Semgrep's MCP (Management Cloud Platform) Findings API.
+    Fetches findings from the Semgrep AppSec Platform Findings API.
 
     This function retrieves security, code quality, and supply chain findings that have already been
     identified by previous Semgrep scans and uploaded to the Semgrep MCP platform. It does NOT
