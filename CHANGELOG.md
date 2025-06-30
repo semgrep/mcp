@@ -1,4 +1,9 @@
 # Changelog
+## [0.4.1] - 2025-06-30
+
+- Make MCP transport stateless and use JSON
+- Add Helm chart
+
 ## [0.4.0] - 2025-06-24
 
 - Add `semgrep_findings` tool
