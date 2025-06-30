@@ -1042,13 +1042,13 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mcp", specifier = ">=1.9.4" },
+    { name = "mcp", specifier = ">=1.10.1" },
     { name = "semgrep", specifier = ">=1.122.0" },
 ]
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "mcp", extras = ["cli"], specifier = ">=1.9.4" },
+    { name = "mcp", extras = ["cli"], specifier = ">=1.10.1" },
     { name = "mypy", specifier = ">=1.15.0" },
     { name = "pytest", specifier = ">=8.1.1" },
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
