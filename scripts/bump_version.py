@@ -67,6 +67,20 @@ def update_changelog(file_path: Path, new_version: str) -> None:
     file_path.write_text(content)
 
 
+def update_chart_yaml(file_path: Path, new_version: str) -> None:
+    """Update version in Chart.yaml."""
+    content = file_path.read_text()
+    # Update version: ...
+    new_content = re.sub(
+        r'version:\s*[\d.]+', f'version: {new_version}', content
+    )
+    # Update appVersion: ...
+    new_content = re.sub(
+        r'appVersion:\s*"[^"]*"', f'appVersion: "{new_version}"', new_content
+    )
+    file_path.write_text(new_content)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Bump version numbers in the project")
     parser.add_argument(
@@ -92,12 +106,14 @@ def main():
     update_pyproject_toml(pyproject_path, new_version)
     update_server_py(root_dir / "src" / "semgrep_mcp" / "server.py", new_version)
     update_changelog(root_dir / "CHANGELOG.md", new_version)
+    update_chart_yaml(root_dir / "chart" / "semgrep-mcp" / "Chart.yaml", new_version)
 
     print(f"Successfully bumped version from {current_version} to {new_version}")
     print("Files updated:")
     print("- pyproject.toml")
     print("- src/semgrep_mcp/server.py")
     print("- CHANGELOG.md")
+    print("- chart/semgrep-mcp/Chart.yaml")
 
 
 if __name__ == "__main__":
