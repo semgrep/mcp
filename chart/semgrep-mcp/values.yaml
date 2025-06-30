@@ -1,0 +1,27 @@
+replicaCount: 1
+
+image:
+  repository: semgrep/mcp
+  tag: main
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  hosts:
+    - host: semgrep-mcp.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+resources: {}
+
+env: []
+# - name: SEMGREP_API_TOKEN
+#   value: "your-token-here" 
