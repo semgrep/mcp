@@ -396,6 +396,8 @@ mcp = FastMCP(
     "Semgrep",
     version=__version__,
     request_timeout=DEFAULT_TIMEOUT,
+    stateless_http=True,
+    json_response=True,
 )
 
 http_client = httpx.AsyncClient()
