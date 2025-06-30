@@ -17,6 +17,7 @@ from mcp.types import (
     ErrorData,
 )
 from pydantic import Field, ValidationError
+from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from semgrep_mcp.models import CodeFile, Finding, SemgrepScanResult
@@ -969,8 +970,8 @@ async def get_semgrep_rule_yaml(rule_id: str = RULE_ID_FIELD) -> str:
             ErrorData(code=INTERNAL_ERROR, message=f"Error loading Semgrep rule schema: {e!s}")
         ) from e
 
-@mcp.custom_route("/health")
-async def health() -> JSONResponse:
+@mcp.custom_route("/health", methods=["GET"])
+async def health(request: Request) -> JSONResponse:
     """Health check endpoint"""
     return JSONResponse({
         "status": "ok",
