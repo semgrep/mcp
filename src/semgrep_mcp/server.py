@@ -273,7 +273,9 @@ def create_temp_files_from_code_content(code_files: list[CodeFile]) -> str:
         ) from e
 
 
-def get_semgrep_scan_args(temp_dir: str, config: str | None = None, scan_type: str = "code") -> list[str]:
+def get_semgrep_scan_args(
+    temp_dir: str, config: str | None = None, scan_type: str = "code"
+) -> list[str]:
     """
     Builds command arguments for semgrep scan
 
@@ -290,8 +292,8 @@ def get_semgrep_scan_args(temp_dir: str, config: str | None = None, scan_type: s
     # or whatever the logged in config is
     args = ["ci", "--json", "--dry-run"]  # avoid the extra exec
     api_token = os.environ.get("SEMGREP_API_TOKEN")
-    if config:
-        args.extend(["--config", config])
+    # if config:
+    #     args.extend(["--config", config])
     match scan_type:
         case "code":
             args.append("--code")
@@ -319,7 +321,7 @@ def get_semgrep_scan_args(temp_dir: str, config: str | None = None, scan_type: s
             raise McpError(
                 ErrorData(code=INVALID_PARAMS, message=f"Invalid scan type: {scan_type}")
             )
-    args.append(temp_dir)
+    args.extend(["--include", temp_dir])
     return args
 
 
@@ -727,7 +729,7 @@ async def semgrep_scan_with_custom_rule(
 async def semgrep_scan(
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
-    scan_type: str = "code"
+    scan_type: str = "code",
 ) -> SemgrepScanResult:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
@@ -735,7 +737,7 @@ async def semgrep_scan(
     Use this tool when you need to:
       - scan code files for security vulnerabilities
       - scan code files for other issues
-    
+
     Args:
         code_files: The code files to scan.
         config: The Semgrep config to use.
@@ -1007,13 +1009,12 @@ async def get_semgrep_rule_yaml(rule_id: str = RULE_ID_FIELD) -> str:
             ErrorData(code=INTERNAL_ERROR, message=f"Error loading Semgrep rule schema: {e!s}")
         ) from e
 
+
 @mcp.custom_route("/health", methods=["GET"])
 async def health(request: Request) -> JSONResponse:
     """Health check endpoint"""
-    return JSONResponse({
-        "status": "ok",
-        "version": __version__
-    })
+    return JSONResponse({"status": "ok", "version": __version__})
+
 
 # ---------------------------------------------------------------------------------
 # MCP Server Entry Point
