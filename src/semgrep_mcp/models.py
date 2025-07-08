@@ -35,7 +35,7 @@ class ExternalTicket(BaseModel):
 
 class ReviewComment(BaseModel):
     external_discussion_id: str
-    external_note_id: int
+    external_note_id: int | None = None
 
 
 class Repository(BaseModel):
@@ -89,10 +89,10 @@ class Component(BaseModel):
 
 
 class Assistant(BaseModel):
-    autofix: Autofix
-    guidance: Guidance
-    autotriage: Autotriage
-    component: Component
+    autofix: Autofix | None = None
+    guidance: Guidance | None = None
+    autotriage: Autotriage | None = None
+    component: Component | None = None
 
 
 class Finding(BaseModel):
