@@ -20,7 +20,7 @@ from pydantic import Field, ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from semgrep_mcp.models import CodeFile, Finding, SemgrepScanResult
+from semgrep_mcp.models import CodeFile, Finding, LocalCodeFile, SemgrepScanResult
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -35,6 +35,9 @@ SEMGREP_API_VERSION = "v1"
 
 # Field definitions for function parameters
 CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
+LOCAL_CODE_FILES_FIELD = Field(description=("List of dictionaries with 'path' "
+                                            "pointing to the absolute path of the code file"))
+
 CONFIG_FIELD = Field(
     description="Optional Semgrep configuration string (e.g. 'p/docker', 'p/xss', 'auto')",
     default=None,
@@ -738,6 +741,50 @@ async def semgrep_scan(
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+@mcp.tool()
+async def semgrep_scan_local(
+    code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,
+    config: str | None = CONFIG_FIELD,
+) -> list[SemgrepScanResult]:
+    """
+    Runs a Semgrep scan locally on provided code files returns the findings in JSON format.
+
+    Files are expected to be in the current paths are absolute paths to the code files.
+
+    Use this tool when you need to:
+      - scan code files for security vulnerabilities
+      - scan code files for other issues
+    """
+    import os
+    if not os.environ.get("SEMGREP_ALLOW_LOCAL_SCAN"):
+        raise McpError(
+            ErrorData(
+                code=INVALID_PARAMS,
+                message="Local Semgrep scans are not allowed unless SEMGREP_ALLOW_LOCAL_SCAN is set"
+            )
+        )
+    # Validate config
+    config = validate_config(config)
+
+    try:
+        results = []
+        for cf in code_files:
+            args = get_semgrep_scan_args(cf.path, config)
+            output = await run_semgrep(args)
+            result: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+            results.append(result)
+        return results
+
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+        ) from e
 
 @mcp.tool()
 async def security_check(
