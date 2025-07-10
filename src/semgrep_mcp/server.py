@@ -295,8 +295,6 @@ def get_semgrep_scan_args(
     # or whatever the logged in config is
     args = ["ci", "--json", "--dry-run"]  # avoid the extra exec
     api_token = os.environ.get("SEMGREP_API_TOKEN")
-    # if config:
-    #     args.extend(["--config", config])
     match scan_type:
         case "code":
             args.append("--code")
@@ -305,7 +303,8 @@ def get_semgrep_scan_args(
                 raise McpError(
                     ErrorData(
                         code=INVALID_PARAMS,
-                        message="SEMGREP_API_TOKEN environment variable must be set to use this tool."
+                        message=("SEMGREP_API_TOKEN environment variable "
+                                           "must be set to use this tool.")
                         "Create a token at semgrep.dev to continue.",
                     )
                 )
@@ -315,7 +314,8 @@ def get_semgrep_scan_args(
                 raise McpError(
                     ErrorData(
                         code=INVALID_PARAMS,
-                        message="SEMGREP_API_TOKEN environment variable must be set to use this tool."
+                        message=("SEMGREP_API_TOKEN environment variable "
+                                           "must be set to use this tool.")
                         "Create a token at semgrep.dev to continue.",
                     )
                 )
