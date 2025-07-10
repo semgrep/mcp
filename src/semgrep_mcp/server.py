@@ -303,9 +303,9 @@ def get_semgrep_scan_args(
                 raise McpError(
                     ErrorData(
                         code=INVALID_PARAMS,
-                        message=("SEMGREP_API_TOKEN environment variable "
-                                           "must be set to use this tool.")
-                        "Create a token at semgrep.dev to continue.",
+                        message="SEMGREP_API_TOKEN environment variable "
+                                "must be set to use this tool. Create a "
+                                "token at semgrep.dev to continue.",
                     )
                 )
             args.append("--supply-chain")
@@ -314,9 +314,9 @@ def get_semgrep_scan_args(
                 raise McpError(
                     ErrorData(
                         code=INVALID_PARAMS,
-                        message=("SEMGREP_API_TOKEN environment variable "
-                                           "must be set to use this tool.")
-                        "Create a token at semgrep.dev to continue.",
+                        message="SEMGREP_API_TOKEN environment variable "
+                                "must be set to use this tool. Create a "
+                                "token at semgrep.dev to continue.",
                     )
                 )
             args.append("--secrets")
