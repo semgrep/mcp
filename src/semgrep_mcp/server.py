@@ -119,12 +119,11 @@ def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
     return normalized_path
 
 
-def validate_config(config: str | None = None) -> str | None:
+def validate_config(config: str | None = None) -> str:
     """Validates semgrep configuration parameter"""
     # Allow registry references (p/ci, p/security, etc.)
     if config is None or config.startswith("p/") or config.startswith("r/") or config == "auto":
-        return config
-
+        return config or ""
     # Otherwise, treat as path and validate
     return validate_absolute_path(config, "config")
 
@@ -239,6 +238,8 @@ def create_temp_files_from_code_content(code_files: list[CodeFile]) -> str:
     Raises:
         McpError: If there are issues creating or writing to files
     """
+    temp_dir = None
+
     try:
         # Create a temporary directory
         temp_dir = tempfile.mkdtemp(prefix="semgrep_scan_")
@@ -268,7 +269,7 @@ def create_temp_files_from_code_content(code_files: list[CodeFile]) -> str:
 
         return temp_dir
     except Exception as e:
-        if "temp_dir" in locals():
+        if temp_dir:
             # Clean up temp directory if creation failed
             shutil.rmtree(temp_dir, ignore_errors=True)
         raise McpError(
@@ -490,14 +491,14 @@ async def get_deployment_slug() -> str:
 
         # Extract deployment slug - assuming we want the first deployment
         deployments = data.get("deployments", [])
-        if not deployments:
+        if not deployments or not deployments[0].get("slug"):
             raise McpError(
                 ErrorData(code=INTERNAL_ERROR, message="No deployments found for this API token")
             )
 
         # Cache the slug from the first deployment
         DEPLOYMENT_SLUG = deployments[0]["slug"]
-        return DEPLOYMENT_SLUG
+        return str(DEPLOYMENT_SLUG)
 
     except httpx.HTTPStatusError as e:
         if e.response.status_code == 401:
@@ -666,6 +667,7 @@ async def semgrep_scan_with_custom_rule(
     """
     # Validate code_files
     validate_code_files(code_files)
+    temp_dir = None
     try:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
@@ -693,7 +695,7 @@ async def semgrep_scan_with_custom_rule(
         ) from e
 
     finally:
-        if "temp_dir" in locals():
+        if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -716,6 +718,7 @@ async def semgrep_scan(
     # Validate code_files
     validate_code_files(code_files)
 
+    temp_dir = None
     try:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
@@ -737,7 +740,7 @@ async def semgrep_scan(
         ) from e
 
     finally:
-        if "temp_dir" in locals():
+        if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -766,6 +769,7 @@ async def semgrep_scan_local(
     # Validate config
     config = validate_config(config)
 
+    temp_dir = None
     try:
         results = []
         for cf in code_files:
@@ -785,6 +789,11 @@ async def semgrep_scan_local(
         raise McpError(
             ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
         ) from e
+
+    finally:
+        if temp_dir:
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
 
 @mcp.tool()
 async def security_check(
@@ -815,6 +824,7 @@ Here are the details of the security issues found:
     {details}
 </security-issues>
 """
+    temp_dir = None
     try:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
@@ -843,7 +853,7 @@ Here are the details of the security issues found:
         ) from e
 
     finally:
-        if "temp_dir" in locals():
+        if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -863,6 +873,8 @@ async def get_abstract_syntax_tree(
       - see what a parser sees in the code
     """
 
+    temp_dir = None
+    temp_file_path = ""
     try:
         # Create temporary directory and file for AST generation
         temp_dir = tempfile.mkdtemp(prefix="semgrep_ast_")
@@ -900,7 +912,7 @@ async def get_abstract_syntax_tree(
             ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
         ) from e
     finally:
-        if "temp_dir" in locals():
+        if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
