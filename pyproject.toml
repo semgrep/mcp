@@ -36,7 +36,7 @@ classifiers = [
     "Topic :: Software Development :: Quality Assurance",
 ]
 dependencies = [
-    "mcp>=1.10.1",
+    "mcp>=1.11.0",
     "semgrep>=1.122.0",
 ]
 
@@ -55,7 +55,7 @@ semgrep-mcp = "semgrep_mcp.server:main"
 
 [tool.uv]
 dev-dependencies = [
-    "mcp[cli]>=1.10.1",
+    "mcp[cli]>=1.11.0",
     "ruff>=0.11.4",
     "pytest>=8.1.1",
     "pytest-asyncio>=0.23.0",
