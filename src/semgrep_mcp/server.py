@@ -293,7 +293,11 @@ def get_semgrep_scan_args(temp_dir: str, config: str | None = None) -> list[str]
     # if no config is provided to allow for either the default "auto"
     # or whatever the logged in config is
     args = ["scan", "--json", "--experimental"]  # avoid the extra exec
-    if config:
+
+    # if auth is provided, use it
+    if os.environ.get("SEMGREP_API_TOKEN"):
+        args.extend(["--config", "policy"])
+    elif config:
         args.extend(["--config", config])
     args.append(temp_dir)
     return args
