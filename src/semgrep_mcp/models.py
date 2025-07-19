@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, HttpUrl
 class LocalCodeFile(BaseModel):
     path: str = Field(description="Absolute path to be scanned locally by Semgrep.")
 
+
 class CodeFile(BaseModel):
     filename: str = Field(description="Relative path to the code file")
     content: str = Field(description="Content of the code file")
