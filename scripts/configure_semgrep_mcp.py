@@ -5,17 +5,44 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 
+def _validate_env_var_name(name: str) -> bool:
+    """Validate environment variable name to prevent injection."""
+    return re.match(r'^[A-Z_][A-Z0-9_]*$', name) is not None
+
+
+def _validate_path(path: Path) -> bool:
+    """Validate path to prevent directory traversal."""
+    try:
+        # Resolve and check if path is within reasonable bounds
+        resolved = path.resolve()
+        # Must be absolute and not contain suspicious patterns
+        path_str = str(resolved)
+        return (
+            resolved.is_absolute() and
+            '..' not in path.parts and
+            not any(part.startswith('.') and len(part) > 1 for part in path.parts[1:])
+        )
+    except (OSError, ValueError):
+        return False
+
+
 def check_claude_cli_available() -> bool:
     """Check if Claude CLI is available."""
     try:
-        result = subprocess.run(["claude", "--version"], capture_output=True, text=True)
+        result = subprocess.run(
+            ["claude", "--version"], 
+            capture_output=True, 
+            text=True,
+            timeout=10
+        )
         return result.returncode == 0
-    except FileNotFoundError:
+    except (FileNotFoundError, subprocess.TimeoutExpired):
         return False
 
 
@@ -26,6 +53,11 @@ def configure_with_claude_cli() -> bool:
     # Get the current directory (should be the semgrep-mcp project root)
     current_dir = Path(__file__).parent.parent
     
+    # Validate path for security
+    if not _validate_path(current_dir):
+        print("❌ Invalid project directory path")
+        return False
+    
     # Build command for semgrep-mcp from current directory
     command = [
         "uv",
@@ -35,17 +67,24 @@ def configure_with_claude_cli() -> bool:
         "semgrep-mcp"
     ]
 
-    # Prepare environment variables
+    # Prepare environment variables with validation
     env_vars = {}
     
-    # Add SEMGREP_APP_TOKEN if it exists
+    # Add SEMGREP_APP_TOKEN if it exists and is valid
     if semgrep_token := os.getenv("SEMGREP_APP_TOKEN"):
-        env_vars["SEMGREP_APP_TOKEN"] = semgrep_token
+        if _validate_env_var_name("SEMGREP_APP_TOKEN"):
+            # Validate token format (basic check)
+            if re.match(r'^[a-zA-Z0-9_-]+$', semgrep_token):
+                env_vars["SEMGREP_APP_TOKEN"] = semgrep_token
+            else:
+                print("⚠️  Invalid SEMGREP_APP_TOKEN format, skipping")
 
     # Prepare environment arguments for Claude CLI
     env_args = []
     for key, value in env_vars.items():
-        env_args.extend(["-e", f"{key}={value}"])
+        # Double-check key is safe
+        if _validate_env_var_name(key):
+            env_args.extend(["-e", f"{key}={value}"])
 
     # Build the full Claude CLI command for user scope (global)
     claude_cmd = [
@@ -60,20 +99,42 @@ def configure_with_claude_cli() -> bool:
         *command,
     ]
 
-    print(f"🚀 Running: {' '.join(claude_cmd)}")
+    # Safe command display (don't show sensitive values)
+    safe_cmd = []
+    skip_next = False
+    for i, arg in enumerate(claude_cmd):
+        if skip_next:
+            safe_cmd.append("***")
+            skip_next = False
+        elif arg == "-e":
+            safe_cmd.append(arg)
+            skip_next = True
+        else:
+            safe_cmd.append(arg)
+    
+    print(f"🚀 Running: {' '.join(safe_cmd)}")
 
     try:
-        result = subprocess.run(claude_cmd, capture_output=True, text=True)
+        result = subprocess.run(
+            claude_cmd, 
+            capture_output=True, 
+            text=True,
+            timeout=30
+        )
 
         if result.returncode == 0:
             print("✅ Semgrep MCP configured successfully using Claude CLI")
             return True
         else:
-            print(f"❌ Claude CLI configuration failed: {result.stderr}")
+            # Don't expose potentially sensitive stderr content
+            print("❌ Claude CLI configuration failed")
             return False
 
+    except subprocess.TimeoutExpired:
+        print("❌ Claude CLI command timed out")
+        return False
     except Exception as e:
-        print(f"❌ Failed to run Claude CLI: {e}")
+        print(f"❌ Failed to run Claude CLI: {type(e).__name__}")
         return False
 
 
@@ -84,6 +145,15 @@ def configure_with_json_file() -> bool:
     home = Path.home()
     claude_config = home / ".claude.json"
     current_dir = Path(__file__).parent.parent
+
+    # Validate paths
+    if not _validate_path(current_dir):
+        print("❌ Invalid project directory path")
+        return False
+    
+    if not _validate_path(claude_config.parent):
+        print("❌ Invalid config directory path")
+        return False
 
     # Prepare configuration
     config = {
@@ -101,33 +171,63 @@ def configure_with_json_file() -> bool:
         }
     }
 
-    # Add environment variables
+    # Add environment variables with validation
     if semgrep_token := os.getenv("SEMGREP_APP_TOKEN"):
-        config["mcpServers"]["semgrep-mcp"]["env"]["SEMGREP_APP_TOKEN"] = semgrep_token
+        if _validate_env_var_name("SEMGREP_APP_TOKEN"):
+            if re.match(r'^[a-zA-Z0-9_-]+$', semgrep_token):
+                config["mcpServers"]["semgrep-mcp"]["env"]["SEMGREP_APP_TOKEN"] = semgrep_token
+            else:
+                print("⚠️  Invalid SEMGREP_APP_TOKEN format, skipping")
 
     # Load existing config if it exists
     existing_config = {}
     if claude_config.exists():
         try:
+            # Check file size to prevent loading huge files
+            if claude_config.stat().st_size > 1024 * 1024:  # 1MB limit
+                print("❌ Config file too large")
+                return False
+            
             with claude_config.open() as f:
                 existing_config = json.load(f)
         except (OSError, json.JSONDecodeError) as e:
-            print(f"Warning: Could not load existing config: {e}")
+            print("⚠️  Could not load existing config, creating new one")
 
-    # Merge configurations
+    # Merge configurations safely
+    if not isinstance(existing_config, dict):
+        existing_config = {}
+    
     if "mcpServers" not in existing_config:
+        existing_config["mcpServers"] = {}
+    
+    if not isinstance(existing_config["mcpServers"], dict):
         existing_config["mcpServers"] = {}
 
     existing_config["mcpServers"]["semgrep-mcp"] = config["mcpServers"]["semgrep-mcp"]
 
-    # Write configuration
+    # Write configuration with safety checks
     try:
+        # Create backup if file exists
+        if claude_config.exists():
+            backup_path = claude_config.with_suffix('.json.backup')
+            claude_config.rename(backup_path)
+        
         with claude_config.open("w") as f:
-            json.dump(existing_config, f, indent=2)
+            json.dump(existing_config, f, indent=2, ensure_ascii=True)
+        
+        # Remove backup on success
+        backup_path = claude_config.with_suffix('.json.backup')
+        if backup_path.exists():
+            backup_path.unlink()
+        
         print(f"✅ Configuration written to: {claude_config}")
         return True
-    except OSError as e:
-        print(f"❌ Failed to write configuration: {e}")
+    except OSError:
+        print("❌ Failed to write configuration")
+        # Restore backup if it exists
+        backup_path = claude_config.with_suffix('.json.backup')
+        if backup_path.exists():
+            backup_path.rename(claude_config)
         return False
 
 
@@ -139,7 +239,10 @@ def verify_configuration() -> bool:
     if check_claude_cli_available():
         try:
             result = subprocess.run(
-                ["claude", "mcp", "list"], capture_output=True, text=True
+                ["claude", "mcp", "list"], 
+                capture_output=True, 
+                text=True,
+                timeout=15
             )
             if result.returncode == 0 and "semgrep-mcp" in result.stdout:
                 print("✅ Semgrep MCP found in Claude MCP server list")
@@ -147,24 +250,35 @@ def verify_configuration() -> bool:
             else:
                 print("⚠️  Semgrep MCP not found in Claude MCP server list")
                 return False
-        except Exception as e:
-            print(f"⚠️  Could not verify via Claude CLI: {e}")
+        except subprocess.TimeoutExpired:
+            print("⚠️  Claude CLI verification timed out")
+            return False
+        except Exception:
+            print("⚠️  Could not verify via Claude CLI")
 
     # Fallback: check if config file exists
     claude_config = Path.home() / ".claude.json"
-    if claude_config.exists():
+    if claude_config.exists() and _validate_path(claude_config):
         try:
+            # Check file size before loading
+            if claude_config.stat().st_size > 1024 * 1024:
+                print("❌ Config file too large to verify")
+                return False
+                
             with claude_config.open() as f:
                 config = json.load(f)
 
-            if "mcpServers" in config and "semgrep-mcp" in config["mcpServers"]:
+            if (isinstance(config, dict) and 
+                "mcpServers" in config and 
+                isinstance(config["mcpServers"], dict) and
+                "semgrep-mcp" in config["mcpServers"]):
                 print("✅ Semgrep MCP found in configuration file")
                 return True
             else:
                 print("⚠️  Semgrep MCP not found in configuration file")
                 return False
-        except Exception as e:
-            print(f"⚠️  Could not verify configuration file: {e}")
+        except (OSError, json.JSONDecodeError):
+            print("⚠️  Could not verify configuration file")
             return False
 
     print("⚠️  No configuration found")
@@ -204,35 +318,46 @@ def main():
     print("\n📋 Global Configuration Summary:")
     print("   🌐 Configuration Type: Global (available to all Claude Code sessions)")
     print("   📝 Server Name: semgrep-mcp")
-    print(f"   🚀 Command: uv run --directory {current_dir} semgrep-mcp")
+    # Safe path display
+    if _validate_path(current_dir):
+        print(f"   🚀 Command: uv run --directory {current_dir} semgrep-mcp")
+    else:
+        print("   🚀 Command: [path validation failed]")
 
     print("   🌍 Environment Variables:")
-    if os.getenv("SEMGREP_APP_TOKEN"):
-        print(f"     SEMGREP_APP_TOKEN: {'*' * min(8, len(os.getenv('SEMGREP_APP_TOKEN')))}")
+    # Safe token display
+    token = os.getenv("SEMGREP_APP_TOKEN")
+    if token and re.match(r'^[a-zA-Z0-9_-]+$', token):
+        print(f"     SEMGREP_APP_TOKEN: {'*' * min(8, len(token))}")
     else:
         print("     SEMGREP_APP_TOKEN: (not set)")
 
     # Check for environment variables
     print("\n🔍 Environment Check:")
 
-    if not os.getenv("SEMGREP_APP_TOKEN"):
+    if not token:
         print("⚠️  SEMGREP_APP_TOKEN not found in environment")
         print("   This is optional but recommended for accessing Semgrep findings")
         print("   Set it with: export SEMGREP_APP_TOKEN=your_token_here")
+    elif not re.match(r'^[a-zA-Z0-9_-]+$', token):
+        print("⚠️  SEMGREP_APP_TOKEN has invalid format")
     else:
         print("✅ SEMGREP_APP_TOKEN is set")
 
     # Check if semgrep is available
     try:
         result = subprocess.run(
-            ["semgrep", "--version"], capture_output=True, text=True
+            ["semgrep", "--version"], 
+            capture_output=True, 
+            text=True,
+            timeout=10
         )
         if result.returncode == 0:
             print("✅ Semgrep is installed and available")
         else:
             print("⚠️  Semgrep is not working properly")
-    except FileNotFoundError:
-        print("❌ Semgrep is not installed")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        print("❌ Semgrep is not installed or not responding")
         print("   Install it with: pip install semgrep")
 
     print("\n🚀 Next Steps:")
