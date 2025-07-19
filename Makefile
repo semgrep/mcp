@@ -1,7 +1,7 @@
 # Semgrep MCP Makefile
 # Development and deployment commands for the Semgrep MCP server
 
-.PHONY: help install install-dev run test test-claude-integration lint format typecheck clean configure-claude-code check-claude-config dev-setup check dev build
+.PHONY: help install install-dev run test test-claude-integration lint format typecheck clean configure-claude-code check-claude-config dev-setup pre-commit-install check dev build
 
 # Default target
 help:
@@ -18,6 +18,7 @@ help:
 	@echo "  typecheck         Run type checking with ruff"
 	@echo "  configure-claude-code  Configure Claude Code integration globally"
 	@echo "  check-claude-config    Check Claude Code configuration status"
+	@echo "  pre-commit-install     Install pre-commit hooks"
 	@echo "  clean             Clean build artifacts and cache"
 	@echo "  dev-setup         Setup development environment"
 	@echo "  check             Run all quality checks"
@@ -74,6 +75,14 @@ check-claude-config:
 	@echo "Getting details for semgrep-mcp server:"
 	@claude mcp get semgrep-mcp || echo "❌ semgrep-mcp server not found"
 
+# Pre-commit setup
+pre-commit-install:
+	@echo "Installing pre-commit hooks..."
+	uv run pre-commit install
+	@echo "✅ Pre-commit hooks installed"
+	@echo "   Hooks will run automatically on git commit"
+	@echo "   To run manually: uv run pre-commit run --all-files"
+
 # Maintenance
 clean:
 	@echo "Cleaning build artifacts..."
@@ -88,10 +97,11 @@ clean:
 	find . -type f -name "*.pyc" -delete
 
 # Development workflow
-dev-setup: install-dev
+dev-setup: install-dev pre-commit-install
 	@echo "Development environment setup complete!"
 	@echo "Run 'make run' to start the server"
 	@echo "Run 'make test' to run tests"
+	@echo "Pre-commit hooks are installed and will run on git commit"
 
 # Build and quality check
 check: lint typecheck test test-claude-integration
