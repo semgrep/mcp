@@ -1,0 +1,43 @@
+# Pre-commit configuration that matches CI checks
+repos:
+  # Ruff - matches .github/workflows/lint.yml ruff job
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.4
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  # Pyright type checking - matches .github/workflows/lint.yml pyright job
+  - repo: local
+    hooks:
+      - id: pyright
+        name: pyright
+        entry: uv
+        language: system
+        types: [python]
+        files: ^src/
+        pass_filenames: false
+        args: [run, pyright, src/]
+
+  # Pytest unit tests - matches .github/workflows/test.yml unit-tests job
+  - repo: local
+    hooks:
+      - id: pytest-unit
+        name: pytest unit tests
+        entry: uv
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: [run, pytest, tests/unit/, --doctest-modules]
+
+  # Pytest integration tests - matches .github/workflows/test.yml integration-tests job
+  - repo: local
+    hooks:
+      - id: pytest-integration
+        name: pytest integration tests
+        entry: uv
+        language: system
+        types: [python]
+        pass_filenames: false
+        args: [run, pytest, tests/integration/, --doctest-modules]
