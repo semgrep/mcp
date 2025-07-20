@@ -10,14 +10,30 @@ from unittest import mock
 import pytest
 
 
+def is_claude_cli_available() -> bool:
+    """Check if Claude CLI is available in the system."""
+    try:
+        result = subprocess.run(["claude", "--version"], capture_output=True, text=True, timeout=10)
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+# Skip entire test class if Claude CLI is not available
+claude_cli_available = is_claude_cli_available()
+skip_reason = "Claude CLI not available - install from https://claude.ai/code"
+
+
 class TestClaudeCodeIntegration:
     """Test suite for Claude Code MCP server global registration."""
 
+    @pytest.mark.skipif(not claude_cli_available, reason=skip_reason)
     def test_claude_code_config_exists(self):
         """Test that Claude Code configuration exists in the expected location."""
         config_path = pathlib.Path.home() / ".claude.json"
         assert config_path.exists(), f"Claude Code MCP config not found at {config_path}"
 
+    @pytest.mark.skipif(not claude_cli_available, reason=skip_reason)
     def test_claude_code_config_format(self):
         """Test that the Claude Code configuration has the correct format."""
         config_path = pathlib.Path.home() / ".claude.json"
@@ -32,6 +48,7 @@ class TestClaudeCodeIntegration:
         assert "command" in server_config, "Server config missing 'command'"
         assert "args" in server_config, "Server config missing 'args'"
 
+    @pytest.mark.skipif(not claude_cli_available, reason=skip_reason)
     def test_claude_code_server_command(self):
         """Test that the configured server command is valid."""
         config_path = pathlib.Path.home() / ".claude.json"
@@ -102,6 +119,7 @@ class TestClaudeCodeIntegration:
                 assert "semgrep-mcp" in args
                 assert "--directory" in args
 
+    @pytest.mark.skipif(not claude_cli_available, reason=skip_reason)
     def test_makefile_check_command(self):
         """Test that the Makefile check-claude-config command works correctly."""
         result = subprocess.run(
@@ -121,6 +139,7 @@ class TestClaudeCodeIntegration:
         if "semgrep-mcp" in result.stdout:
             assert "semgrep-mcp" in result.stdout
 
+    @pytest.mark.skipif(not claude_cli_available, reason=skip_reason)
     def test_server_can_be_launched(self):
         """Test that the MCP server can be launched with the configured command."""
         config_path = pathlib.Path.home() / ".claude.json"
@@ -185,6 +204,7 @@ class TestClaudeCodeIntegration:
                 process.terminate()
                 process.wait()
 
+    @pytest.mark.skipif(not claude_cli_available, reason=skip_reason)
     def test_global_registration_persists(self):
         """Test that the global registration persists across system restarts."""
         config_path = pathlib.Path.home() / ".claude.json"
