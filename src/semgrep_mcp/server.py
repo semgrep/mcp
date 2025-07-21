@@ -525,13 +525,13 @@ async def get_deployment_slug() -> str:
 
 @mcp.tool()
 async def semgrep_findings(
-    issue_type: list[str] | None = None,
-    status: str | None = None,
-    repos: list[str] | None = None,
-    severities: list[str] | None = None,
-    confidence: list[str] | None = None,
-    autotriage_verdict: str | None = None,
-    page: int | None = None,
+    issue_type: list[str] = ["sast", "sca"],
+    repos: list[str] = None,  # pyright: ignore
+    status: str = "open",
+    severities: list[str] = None,  # pyright: ignore
+    confidence: list[str] = None,  # pyright: ignore
+    autotriage_verdict: str = "true_positive",
+    page: int = 0,
     page_size: int = 100,
 ) -> list[Finding]:
     """
@@ -542,11 +542,17 @@ async def semgrep_findings(
     perform a new scan or analyze code directly. Instead, it queries the Semgrep API to access
     historical scan results for a given repository or set of repositories.
 
+    DEFAULT BEHAVIOR: By default, this tool should filter by the current repository. The model should
+    determine the current repository name and pass it in the 'repos' parameter to ensure findings
+    are scoped to the relevant codebase. However, users may explicitly request findings from other
+    repositories, in which case the model should respect that request.
+
     Use this function when a prompt requests a summary, list, or analysis of existing findings,
     such as:
         - "Please list the top 10 security findings and propose solutions for them."
         - "Show all open critical vulnerabilities in this repository."
         - "Summarize the most recent Semgrep scan results."
+        - "Get findings from repository X" (explicitly requesting different repo)
 
     This function is ideal for:
     - Reviewing, listing, or summarizing findings from past scans.
@@ -556,23 +562,25 @@ async def semgrep_findings(
     Semgrep. For new scans, use the appropriate scanning function.
 
     Args:
-        issue_type (Optional[List[str]]): Filter findings by type (e.g., ['sast'], ['sca']).
-        status (Optional[str]): Filter findings by status (e.g., 'open' for unresolved findings).
-        repos (Optional[List[str]]): List of repository names to filter results.
+        issue_type (Optional[List[str]]): Filter findings by type. Use 'sast' for code analysis 
+            findings and 'sca' for supply chain analysis findings (e.g., ['sast'], ['sca']).
+        status (Optional[str]): Filter findings by status (default: 'open').
+        repos (Optional[List[str]]): List of repository names to filter results. By default, should
+            include the current repository name to scope findings appropriately. Can be overridden
+            when users explicitly request findings from other repositories.
         severities (Optional[List[str]]): Filter findings by severity (e.g., ['critical', 'high']).
         confidence (Optional[List[str]]): Filter findings by confidence level (e.g., ['high']).
         autotriage_verdict (Optional[str]): Filter findings by auto-triage verdict
-            (e.g., 'true_positive').
-        page (Optional[int]): Page number for paginated results.
-        page_size (int): Number of findings per page (default: 100, max: 3000).
+            (default: 'true_positive').
+        page (Optional[int]): Page number for paginated results. (default: 0)
+        page_size (int): Number of findings per page (default: 100, min: 100, max: 3000).
 
     Returns:
         List[Finding]: A list of findings matching the specified filters, where each finding
         contains details such as rule ID, description, severity, file location, and remediation
         guidance if available.
     """
-    if issue_type is None:
-        issue_type = ["sast", "sca"]
+
     allowed_issue_types = {"sast", "sca"}
     if not set(issue_type).issubset(allowed_issue_types):
         invalid_types = ", ".join(set(issue_type) - allowed_issue_types)
@@ -604,9 +612,9 @@ async def semgrep_findings(
     headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
 
     params_to_filter: dict[str, Any] = {
-        "issue_type": issue_type,
+        "issue_type": ",".join(issue_type),
         "status": status,
-        "repos": repos,
+        "repos": ",".join(repos) if repos else None,
         "severities": severities,
         "confidence": confidence,
         "autotriage_verdict": autotriage_verdict,

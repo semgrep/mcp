@@ -45,9 +45,10 @@ async def test_semgrep_findings_sast():
     async with stdio_client(server_params) as (read, write):
         async with ClientSession(read, write) as session:
             await session.initialize()
-            results = await session.call_tool("semgrep_findings", {"issue_type": ["sast"]})
+            results = await session.call_tool("semgrep_findings", {"issue_type": ["sast", "sca"]})
             assert results is not None
 
             # Validate findings against the model
             for content in results.content:
-                Finding.model_validate_json(content.text)
+                finding = Finding.model_validate_json(content.text)
+                print(finding)
