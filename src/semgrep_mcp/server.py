@@ -525,11 +525,11 @@ async def get_deployment_slug() -> str:
 
 @mcp.tool()
 async def semgrep_findings(
-    issue_type: list[str] = ["sast", "sca"],
-    repos: list[str] = None,  # pyright: ignore
+    issue_type: list[str] | None = None,
+    repos: list[str] | None = None,  # pyright: ignore
     status: str = "open",
-    severities: list[str] = None,  # pyright: ignore
-    confidence: list[str] = None,  # pyright: ignore
+    severities: list[str] | None = None,  # pyright: ignore
+    confidence: list[str] | None = None,  # pyright: ignore
     autotriage_verdict: str = "true_positive",
     page: int = 0,
     page_size: int = 100,
@@ -542,10 +542,10 @@ async def semgrep_findings(
     perform a new scan or analyze code directly. Instead, it queries the Semgrep API to access
     historical scan results for a given repository or set of repositories.
 
-    DEFAULT BEHAVIOR: By default, this tool should filter by the current repository. The model should
-    determine the current repository name and pass it in the 'repos' parameter to ensure findings
-    are scoped to the relevant codebase. However, users may explicitly request findings from other
-    repositories, in which case the model should respect that request.
+    DEFAULT BEHAVIOR: By default, this tool should filter by the current repository. The model
+    should determine the current repository name and pass it in the 'repos' parameter to ensure
+    findings are scoped to the relevant codebase. However, users may explicitly request findings
+    from other repositories, in which case the model should respect that request.
 
     Use this function when a prompt requests a summary, list, or analysis of existing findings,
     such as:
@@ -562,7 +562,7 @@ async def semgrep_findings(
     Semgrep. For new scans, use the appropriate scanning function.
 
     Args:
-        issue_type (Optional[List[str]]): Filter findings by type. Use 'sast' for code analysis 
+        issue_type (Optional[List[str]]): Filter findings by type. Use 'sast' for code analysis
             findings and 'sca' for supply chain analysis findings (e.g., ['sast'], ['sca']).
         status (Optional[str]): Filter findings by status (default: 'open').
         repos (Optional[List[str]]): List of repository names to filter results. By default, should
@@ -581,6 +581,8 @@ async def semgrep_findings(
         guidance if available.
     """
 
+    if issue_type is None:
+        issue_type = ["sast", "sca"]
     allowed_issue_types = {"sast", "sca"}
     if not set(issue_type).issubset(allowed_issue_types):
         invalid_types = ", ".join(set(issue_type) - allowed_issue_types)
