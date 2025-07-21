@@ -9,8 +9,8 @@ from semgrep_mcp.models import Finding
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(
-    not os.environ.get("SEMGREP_API_TOKEN"),
-    reason="SEMGREP_API_TOKEN not set; skipping integration test.",
+    not os.environ.get("SEMGREP_APP_TOKEN"),
+    reason="SEMGREP_APP_TOKEN not set; skipping integration test.",
 )
 async def test_semgrep_findings_sca():
     server_params = StdioServerParameters(
@@ -32,8 +32,8 @@ async def test_semgrep_findings_sca():
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(
-    not os.environ.get("SEMGREP_API_TOKEN"),
-    reason="SEMGREP_API_TOKEN not set; skipping integration test.",
+    not os.environ.get("SEMGREP_APP_TOKEN"),
+    reason="SEMGREP_APP_TOKEN not set; skipping integration test.",
 )
 async def test_semgrep_findings_sast():
     server_params = StdioServerParameters(

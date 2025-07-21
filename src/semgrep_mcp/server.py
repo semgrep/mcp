@@ -471,12 +471,12 @@ async def get_deployment_slug() -> str:
         return DEPLOYMENT_SLUG
 
     # Get API token
-    api_token = os.environ.get("SEMGREP_API_TOKEN")
+    api_token = os.environ.get("SEMGREP_APP_TOKEN")
     if not api_token:
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
-                message="SEMGREP_API_TOKEN environment variable must be set to use this tool",
+                message="SEMGREP_APP_TOKEN environment variable must be set to use this tool",
             )
         )
 
@@ -505,7 +505,7 @@ async def get_deployment_slug() -> str:
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS,
-                    message="Invalid API token: check your SEMGREP_API_TOKEN environment variable.",
+                    message="Invalid API token: check your SEMGREP_APP_TOKEN environment variable.",
                 )
             ) from e
         else:
@@ -590,12 +590,12 @@ async def semgrep_findings(
         )
 
     deployment = await get_deployment_slug()
-    api_token = os.environ.get("SEMGREP_API_TOKEN")
+    api_token = os.environ.get("SEMGREP_APP_TOKEN")
     if not api_token:
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
-                message="SEMGREP_API_TOKEN environment variable must be set to use this tool. "
+                message="SEMGREP_APP_TOKEN environment variable must be set to use this tool. "
                 "Create a token at semgrep.dev to continue.",
             )
         )
@@ -625,7 +625,7 @@ async def semgrep_findings(
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS,
-                    message="Invalid API token: check your SEMGREP_API_TOKEN environment variable.",
+                    message="Invalid API token: check your SEMGREP_APP_TOKEN environment variable.",
                 )
             ) from e
         elif e.response.status_code == 404:
