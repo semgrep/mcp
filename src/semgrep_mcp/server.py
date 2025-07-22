@@ -525,11 +525,11 @@ async def get_deployment_slug() -> str:
 
 @mcp.tool()
 async def semgrep_findings(
-    issue_type: list[str] | None = None,
-    repos: list[str] | None = None,  # pyright: ignore
+    issue_type: list[str] = ["sast", "sca"],  # noqa: B006
+    repos: list[str] = None,  # pyright: ignore  # noqa: RUF013
     status: str = "open",
-    severities: list[str] | None = None,  # pyright: ignore
-    confidence: list[str] | None = None,  # pyright: ignore
+    severities: list[str] = None,  # pyright: ignore  # noqa: RUF013
+    confidence: list[str] = None,  # pyright: ignore  # noqa: RUF013
     autotriage_verdict: str = "true_positive",
     page: int = 0,
     page_size: int = 100,
@@ -581,8 +581,6 @@ async def semgrep_findings(
         guidance if available.
     """
 
-    if issue_type is None:
-        issue_type = ["sast", "sca"]
     allowed_issue_types = {"sast", "sca"}
     if not set(issue_type).issubset(allowed_issue_types):
         invalid_types = ", ".join(set(issue_type) - allowed_issue_types)
@@ -614,7 +612,7 @@ async def semgrep_findings(
     headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
 
     params_to_filter: dict[str, Any] = {
-        "issue_type": ",".join(issue_type),
+        "issue_type": issue_type,
         "status": status,
         "repos": ",".join(repos) if repos else None,
         "severities": severities,
