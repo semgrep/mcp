@@ -1,6 +1,6 @@
-# Pin to 1.128.1 as a default, but allow it to be overriden in case we
+# Use the latest as a default, but allow it to be overriden in case we
 # want to publish images with different versions of Semgrep.
-ARG BASE_IMAGE=semgrep/semgrep:1.128.1
+ARG BASE_IMAGE=semgrep/semgrep:latest
 
 # Use the Semgrep image, so that we can select which version of
 # Semgrep we want to distribute with.
@@ -29,6 +29,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install .
+
+# Uninstall, because we want to use the base image's version of Semgrep.
+RUN uv pip uninstall semgrep
 
 # need this for `useradd` right after
 RUN apk add shadow
