@@ -279,7 +279,8 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 async def server_lifespan(_server: Server) -> AsyncIterator[SemgrepContext]:
     """Manage server startup and shutdown lifecycle."""
     # Initialize resources on startup
-    process = await run_semgrep_process(["mcp"])
+    # MCP requires Pro Engine
+    process = await run_semgrep_process(["mcp", "--pro"])
 
     try:
         yield SemgrepContext(process=process)
