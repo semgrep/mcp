@@ -37,7 +37,6 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=1.12.0",
-    "semgrep>=1.122.0",
 ]
 
 [project.license]
@@ -63,6 +62,7 @@ dev-dependencies = [
     "tomli-w>=1.0.0",
     "pre-commit>=3.0.0",
     "pyright>=1.1.0",
+    "semgrep>=1.122.0",
 ]
 
 [tool.ruff]

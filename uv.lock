@@ -1157,7 +1157,6 @@ version = "0.4.1"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
-    { name = "semgrep" },
 ]
 
 [package.dev-dependencies]
@@ -1168,15 +1167,13 @@ dev = [
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "ruff" },
+    { name = "semgrep" },
     { name = "tomli" },
     { name = "tomli-w" },
 ]
 
 [package.metadata]
-requires-dist = [
-    { name = "mcp", specifier = ">=1.12.0" },
-    { name = "semgrep", specifier = ">=1.122.0" },
-]
+requires-dist = [{ name = "mcp", specifier = ">=1.12.0" }]
 
 [package.metadata.requires-dev]
 dev = [
@@ -1186,6 +1183,7 @@ dev = [
     { name = "pytest", specifier = ">=8.1.1" },
     { name = "pytest-asyncio", specifier = ">=0.23.0" },
     { name = "ruff", specifier = ">=0.11.4" },
+    { name = "semgrep", specifier = ">=1.122.0" },
     { name = "tomli", specifier = ">=2.0.1" },
     { name = "tomli-w", specifier = ">=1.0.0" },
 ]
