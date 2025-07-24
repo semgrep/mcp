@@ -7,6 +7,10 @@ on:
         description: 'Version of semgrep to use'
         required: true
         type: string
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
 
 env:
   PYTHON_VERSION: 3.9
@@ -55,7 +59,7 @@ jobs:
           aws-region: us-west-2
       - name: Install dependencies and add semgrep version
         env:
-          NEW_SEMGREP_VERSION: ${{ github.event.inputs.version }}
+          NEW_SEMGREP_VERSION: ${{ github.event.inputs.version || '1.127.0' }}
         run: |
           CODE_ARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain r2c --domain-owner 338683922796 --query authorizationToken --output text)
           echo "::add-mask::$CODE_ARTIFACT_AUTH_TOKEN"
