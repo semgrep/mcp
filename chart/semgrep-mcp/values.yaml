@@ -23,5 +23,5 @@ ingress:
 resources: {}
 
 env: []
-# - name: SEMGREP_API_TOKEN
+# - name: SEMGREP_APP_TOKEN
 #   value: "your-token-here" 
