@@ -24,24 +24,6 @@ jobs:
       pull-requests: write
       checks: write
     steps:
-      - name: Get JWT for r2c-argo GitHub App
-        id: jwt
-        uses: docker://public.ecr.aws/y9k7q4m1/devops/cicd:latest
-        env:
-          EXPIRATION: 600 # seconds
-          ISSUER: 132926 # r2c-argo GitHub App id
-          PRIVATE_KEY: ${{ secrets.R2C_ARGO_PRIVATE_KEY }}
-      - name: Get token for r2c-argo GitHub App
-        id: token
-        run: |
-          # r2c-argo GitHub App installation id for semgrep-app-kubernetes repo (18942934)
-          TOKEN="$(curl -X POST \
-          -H "Authorization: Bearer ${{ steps.jwt.outputs.jwt }}" \
-          -H "Accept: application/vnd.github.v3+json" \
-          https://api.github.com/app/installations/18942934/access_tokens | \
-          jq -r .token)"
-          echo "::add-mask::$TOKEN"
-          echo "token=$TOKEN" >> $GITHUB_OUTPUT
       - uses: actions/checkout@v2
         with:
           submodules: true
