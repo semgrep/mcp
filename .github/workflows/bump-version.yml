@@ -81,4 +81,4 @@ jobs:
           fi
           # open new pull request with the body of from the local template.
           res=$(gh pr create --title "${TITLE}" --body "Bump Semgrep Version to ${VERSION}" \
-            --base "${TARGET}" --head "${SOURCE}" --reviewer semgrep/cdx)
+            --base "${TARGET}" --head "${SOURCE}")
