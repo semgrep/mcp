@@ -7,6 +7,9 @@ from typing import Any
 from mcp.shared.exceptions import McpError
 from mcp.types import INTERNAL_ERROR, ErrorData
 
+from semgrep_mcp.models import CodeFile
+from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliMatch, CliOutput
+
 ################################################################################
 # Prelude #
 ################################################################################
@@ -177,13 +180,20 @@ async def run_semgrep_process(args: list[str]) -> asyncio.subprocess.Process:
     # Ensure semgrep is available
     semgrep_path = await ensure_semgrep_available()
 
+    # Just so we get the debug logs for the MCP server
+    env = os.environ.copy()
+    env["SEMGREP_LOG_SRCS"] = "mcp"
+
     # Execute semgrep command
     process = await asyncio.create_subprocess_exec(
         semgrep_path,
         *args,
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+        # This ensures that stderr makes it through to
+        # the server logs, for debugging purposes.
+        stderr=None,
+        env=env
     )
 
     return process
@@ -213,3 +223,31 @@ async def run_semgrep(args: list[str]) -> str:
         )
 
     return stdout.decode()
+
+async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> list[CliMatch]:
+    """
+    Runs semgrep with the given arguments via RPC
+
+    Args:
+        data: List of code files to scan
+
+    Returns:
+        List of CliMatch objects
+    """
+
+    files_json = [{ "file": data.filename, "content": data.content } for data in data]
+
+    # ATD serialized value
+    resp = await context.send_request("scanFiles", files=files_json)
+
+    # should be a list of string-encoded CliMatch ATD objects
+    resp_json = json.loads(resp)
+    assert isinstance(resp_json, list)
+
+    return [
+      # `from_json_string`, not `from_json`. It's literally
+      # a string of the ATD object.
+      # This is because ATD only serializes into a JSON string,
+      # not a Yojson value.
+      CliMatch.from_json_string(match) for match in resp_json
+    ]

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import asyncio
 import os
 import shutil
 import tempfile
@@ -9,7 +10,7 @@ from typing import Any
 
 import click
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
 from mcp.server.lowlevel import Server
 from mcp.shared.exceptions import McpError
 from mcp.types import (
@@ -26,8 +27,10 @@ from semgrep_mcp.semgrep import (
     SemgrepContext,
     run_semgrep,
     run_semgrep_process,
+    run_semgrep_via_rpc,
     set_semgrep_executable,
 )
+from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliMatch
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -606,9 +609,9 @@ async def semgrep_scan_with_custom_rule(
 
 @mcp.tool()
 async def semgrep_scan(
+    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
-    config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult:
+) -> list[CliMatch]:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
 
@@ -616,21 +619,17 @@ async def semgrep_scan(
       - scan code files for security vulnerabilities
       - scan code files for other issues
     """
-    # Validate config
-    config = validate_config(config)
 
     # Validate code_files
+    # TODO: could this be slow if content is big?
     validate_code_files(code_files)
+
+    context: SemgrepContext = ctx.request_context.lifespan_context
 
     temp_dir = None
     try:
-        # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(code_files)
-        args = get_semgrep_scan_args(temp_dir, config)
-        output = await run_semgrep(args)
-        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
-        remove_temp_dir_from_results(results, temp_dir)
-        return results
+        # TODO: perhaps should return more interpretable results?
+        return await run_semgrep_via_rpc(context, code_files)
 
     except McpError as e:
         raise e
