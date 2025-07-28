@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           submodules: true
-          token: ${{ steps.token.outputs.token }}
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
