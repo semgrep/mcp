@@ -69,7 +69,7 @@ jobs:
           SOURCE: "${{ steps.commit.outputs.branch }}"
           TARGET: "${{ github.event.repository.default_branch }}"
           TITLE: "chore: Release Version ${{ inputs.version }}"
-          GITHUB_TOKEN: ${{ steps.token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: "${{ inputs.version }}"
         run: |
           # check if the branch already has a pull request open
