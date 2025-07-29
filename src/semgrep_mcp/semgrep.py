@@ -224,7 +224,7 @@ async def run_semgrep(args: list[str]) -> str:
 
     return stdout.decode()
 
-async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> list[CliMatch]:
+async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> CliOutput:
     """
     Runs semgrep with the given arguments via RPC
 
@@ -240,14 +240,11 @@ async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> 
     # ATD serialized value
     resp = await context.send_request("scanFiles", files=files_json)
 
-    # should be a list of string-encoded CliMatch ATD objects
+    # The JSON we get is double encoded, looks like
+    # '"{"results": ..., ...}"'
+    # so we have to load it twice
     resp_json = json.loads(resp)
-    assert isinstance(resp_json, list)
+    resp_json = json.loads(resp_json)
+    assert isinstance(resp_json, dict)
 
-    return [
-      # `from_json_string`, not `from_json`. It's literally
-      # a string of the ATD object.
-      # This is because ATD only serializes into a JSON string,
-      # not a Yojson value.
-      CliMatch.from_json_string(match) for match in resp_json
-    ]
+    return CliOutput.from_json(resp_json)

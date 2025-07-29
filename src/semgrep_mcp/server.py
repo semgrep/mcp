@@ -30,7 +30,7 @@ from semgrep_mcp.semgrep import (
     run_semgrep_via_rpc,
     set_semgrep_executable,
 )
-from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliMatch
+from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliMatch, CliOutput
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -611,7 +611,7 @@ async def semgrep_scan_with_custom_rule(
 async def semgrep_scan(
     ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
-) -> list[CliMatch]:
+) -> CliOutput:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
 
@@ -629,8 +629,8 @@ async def semgrep_scan(
     temp_dir = None
     try:
         # TODO: perhaps should return more interpretable results?
-        return await run_semgrep_via_rpc(context, code_files)
-
+        cli_output = await run_semgrep_via_rpc(context, code_files)
+        return cli_output
     except McpError as e:
         raise e
     except ValidationError as e:
