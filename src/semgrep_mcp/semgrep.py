@@ -8,7 +8,7 @@ from mcp.shared.exceptions import McpError
 from mcp.types import INTERNAL_ERROR, ErrorData
 
 from semgrep_mcp.models import CodeFile
-from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliMatch, CliOutput
+from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 
 ################################################################################
 # Prelude #
@@ -193,7 +193,7 @@ async def run_semgrep_process(args: list[str]) -> asyncio.subprocess.Process:
         # This ensures that stderr makes it through to
         # the server logs, for debugging purposes.
         stderr=None,
-        env=env
+        env=env,
     )
 
     return process
@@ -224,6 +224,7 @@ async def run_semgrep(args: list[str]) -> str:
 
     return stdout.decode()
 
+
 async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> CliOutput:
     """
     Runs semgrep with the given arguments via RPC
@@ -235,7 +236,7 @@ async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> 
         List of CliMatch objects
     """
 
-    files_json = [{ "file": data.filename, "content": data.content } for data in data]
+    files_json = [{"file": data.filename, "content": data.content} for data in data]
 
     # ATD serialized value
     resp = await context.send_request("scanFiles", files=files_json)

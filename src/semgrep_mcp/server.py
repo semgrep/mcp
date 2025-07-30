@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import asyncio
 import os
 import shutil
 import tempfile
@@ -30,7 +29,7 @@ from semgrep_mcp.semgrep import (
     run_semgrep_via_rpc,
     set_semgrep_executable,
 )
-from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliMatch, CliOutput
+from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -606,6 +605,7 @@ async def semgrep_scan_with_custom_rule(
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+
 @mcp.tool()
 async def semgrep_scan(
     code_files: list[CodeFile] = CODE_FILES_FIELD,
@@ -650,6 +650,7 @@ async def semgrep_scan(
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+
 @mcp.tool()
 async def semgrep_scan_rpc(
     ctx: Context,
@@ -692,6 +693,7 @@ async def semgrep_scan_rpc(
         if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
+
 
 @mcp.tool()
 async def semgrep_scan_local(
