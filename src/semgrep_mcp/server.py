@@ -606,18 +606,64 @@ async def semgrep_scan_with_custom_rule(
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
-
 @mcp.tool()
 async def semgrep_scan(
-    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
-) -> CliOutput:
+    config: str | None = CONFIG_FIELD,
+) -> SemgrepScanResult:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
 
     Use this tool when you need to:
       - scan code files for security vulnerabilities
       - scan code files for other issues
+    """
+    # Validate config
+    config = validate_config(config)
+
+    # Validate code_files
+    validate_code_files(code_files)
+
+    temp_dir = None
+    try:
+        # Create temporary files from code content
+        temp_dir = create_temp_files_from_code_content(code_files)
+        args = get_semgrep_scan_args(temp_dir, config)
+        output = await run_semgrep(args)
+        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+        remove_temp_dir_from_results(results, temp_dir)
+        return results
+
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+        ) from e
+
+    finally:
+        if temp_dir:
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+@mcp.tool()
+async def semgrep_scan_rpc(
+    ctx: Context,
+    code_files: list[CodeFile] = CODE_FILES_FIELD,
+) -> CliOutput:
+    """
+    Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
+
+    This should run much faster than the comparative `semgrep_scan` tool.
+
+    Use this tool when you need to:
+      - scan code files for security vulnerabilities
+      - scan code files for other issues
+      - scan quickly
     """
 
     # Validate code_files
@@ -646,7 +692,6 @@ async def semgrep_scan(
         if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
-
 
 @mcp.tool()
 async def semgrep_scan_local(
