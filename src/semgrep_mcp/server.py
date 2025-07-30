@@ -35,8 +35,11 @@ SEMGREP_API_VERSION = "v1"
 
 # Field definitions for function parameters
 CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
-LOCAL_CODE_FILES_FIELD = Field(description=("List of dictionaries with 'path' "
-                                            "pointing to the absolute path of the code file"))
+LOCAL_CODE_FILES_FIELD = Field(
+    description=(
+        "List of dictionaries with 'path' " "pointing to the absolute path of the code file"
+    )
+)
 
 CONFIG_FIELD = Field(
     description="Optional Semgrep configuration string (e.g. 'p/docker', 'p/xss', 'auto')",
@@ -752,6 +755,7 @@ async def semgrep_scan(
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+
 @mcp.tool()
 async def semgrep_scan_local(
     code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,
@@ -767,11 +771,14 @@ async def semgrep_scan_local(
       - scan code files for other issues
     """
     import os
+
     if not os.environ.get("SEMGREP_ALLOW_LOCAL_SCAN"):
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
-                message="Local Semgrep scans are not allowed unless SEMGREP_ALLOW_LOCAL_SCAN is set"
+                message=(
+                    "Local Semgrep scans are not allowed unless SEMGREP_ALLOW_LOCAL_SCAN is set"
+                ),
             )
         )
     # Validate config
@@ -802,6 +809,7 @@ async def semgrep_scan_local(
         if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
+
 
 @mcp.tool()
 async def security_check(

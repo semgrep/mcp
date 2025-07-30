@@ -1,0 +1,84 @@
+name: bump-version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version of semgrep to use'
+        required: true
+        type: string
+  pull_request:
+    types: [opened, synchronize]
+    branches:
+      - main
+
+env:
+  PYTHON_VERSION: 3.9
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-22.04
+    permissions:
+      id-token: write
+      contents: write
+      pull-requests: write
+      checks: write
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.9"
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: arn:aws:iam::338683922796:role/ai-mcp-deploy-role
+          role-duration-seconds: 900
+          role-session-name: "semgrep-mcp-test-gha"
+          aws-region: us-west-2
+      - name: Install dependencies and add semgrep version
+        env:
+          NEW_SEMGREP_VERSION: ${{ github.event.inputs.version || '1.127.0' }}
+        run: |
+          CODE_ARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain r2c --domain-owner 338683922796 --query authorizationToken --output text)
+          echo "::add-mask::$CODE_ARTIFACT_AUTH_TOKEN"
+          uv add semgrep==$NEW_SEMGREP_VERSION
+      - name: Commit and push
+        id: commit
+        env:
+          NEW_SEMGREP_VERSION: ${{ github.event.inputs.version }}
+        run: |
+          git config user.name ${{ github.actor }}
+          git config user.email ${{ github.actor }}@users.noreply.github.com
+          BRANCH="gha/bump-version-${NEW_SEMGREP_VERSION}-${{ github.run_id }}-${{ github.run_attempt }}"
+          SUBJECT="Bump semgrep to ${NEW_SEMGREP_VERSION}"
+          git checkout -b $BRANCH
+          git add .
+          git commit -m "$SUBJECT"
+          git push --set-upstream origin $BRANCH
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "subject=$SUBJECT" >> $GITHUB_OUTPUT
+      - name: Create PR
+        id: open-pr
+        env:
+          SOURCE: "${{ steps.commit.outputs.branch }}"
+          TARGET: "${{ github.event.repository.default_branch }}"
+          TITLE: "chore: Release Version ${{ inputs.version }}"
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: "${{ inputs.version }}"
+        run: |
+          # check if the branch already has a pull request open
+          if gh pr list --head ${SOURCE} | grep -vq "no pull requests"; then
+              # pull request already open
+              echo "pull request from SOURCE ${SOURCE} to TARGET ${TARGET} is already open";
+              echo "cancelling release"
+              exit 1
+          fi
+          # open new pull request with the body of from the local template.
+          res=$(gh pr create --title "${TITLE}" --body "Bump Semgrep Version to ${VERSION}" \
+            --base "${TARGET}" --head "${SOURCE}")
