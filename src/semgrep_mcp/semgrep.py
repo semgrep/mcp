@@ -16,10 +16,10 @@ from mcp.types import INTERNAL_ERROR, ErrorData
 # Constants #
 ################################################################################
 
-_semgrep_lock = asyncio.Lock()
+_SEMGREP_LOCK = asyncio.Lock()
 
 # Global variable to store the semgrep executable path
-semgrep_executable: str | None = None
+SEMGREP_EXECUTABLE: str | None = None
 
 ################################################################################
 # Finding Semgrep #
@@ -93,14 +93,14 @@ async def ensure_semgrep_available() -> str:
     Raises:
         McpError: If semgrep is not installed or not found
     """
-    global semgrep_executable
+    global SEMGREP_EXECUTABLE
 
     # Fast path - check if we already have the path
-    if semgrep_executable:
-        return semgrep_executable
+    if SEMGREP_EXECUTABLE:
+        return SEMGREP_EXECUTABLE
 
     # Slow path - acquire lock and find semgrep
-    async with _semgrep_lock:
+    async with _SEMGREP_LOCK:
         # Try to find semgrep
         semgrep_path = find_semgrep_path()
 
@@ -118,13 +118,13 @@ async def ensure_semgrep_available() -> str:
             )
 
         # Store the path for future use
-        semgrep_executable = semgrep_path
+        SEMGREP_EXECUTABLE = semgrep_path
         return semgrep_path
 
 
 def set_semgrep_executable(semgrep_path: str) -> None:
-    global semgrep_executable
-    semgrep_executable = semgrep_path
+    global SEMGREP_EXECUTABLE
+    SEMGREP_EXECUTABLE = semgrep_path
 
 
 ################################################################################
