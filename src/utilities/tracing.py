@@ -1,0 +1,91 @@
+#!/usr/bin/env python3
+
+import os
+from contextlib import contextmanager
+from typing import Any, Dict, Generator, Optional
+
+from opentelemetry import trace
+from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import SERVICE_NAME, DEPLOYMENT_ENVIRONMENT, Resource
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+# coupling: these need to be kept in sync with semgrep-proprietary/tracing.py
+DEFAULT_TRACE_ENDPOINT = "https://telemetry.semgrep.dev/v1/traces"
+DEFAULT_DEV_ENDPOINT = "https://telemetry.dev2.semgrep.dev/v1/traces"
+DEFAULT_LOCAL_ENDPOINT = "http://localhost:4318/v1/traces"
+
+MCP_SERVICE_NAME = "mcp"
+
+top_level_span : trace.Span | None = None
+
+
+def get_trace_endpoint() -> str:
+    """Get the appropriate trace endpoint based on environment."""
+    env = os.environ.get("ENVIRONMENT", "dev").lower()
+    
+    if env == "prod":
+        return DEFAULT_TRACE_ENDPOINT
+    elif env == "local":
+        return DEFAULT_LOCAL_ENDPOINT
+    else:
+        return DEFAULT_DEV_ENDPOINT
+
+@contextmanager
+def initialize_tracing(name: str) -> None:
+    """Initialize OpenTelemetry tracing with basic configuration."""
+    
+    # Create resource with basic attributes
+    resource = Resource.create({
+        SERVICE_NAME: MCP_SERVICE_NAME,
+        DEPLOYMENT_ENVIRONMENT: os.environ.get("ENVIRONMENT", "dev"),
+    })
+    
+    # Create tracer provider
+    provider = TracerProvider(resource=resource)
+    
+    # Create OTLP exporter
+    endpoint = get_trace_endpoint()
+    exporter = OTLPSpanExporter(endpoint=endpoint)
+    
+    # Create span processor
+    processor = BatchSpanProcessor(exporter)
+    provider.add_span_processor(processor)
+    
+    # Set the global tracer provider
+    trace.set_tracer_provider(provider)
+    
+    # Get tracer instance
+    tracer = trace.get_tracer(MCP_SERVICE_NAME)
+
+    with tracer.start_as_current_span(name) as span:
+        top_level_span = span
+        print("Tracing initialized")
+        print(f"Tracing initialized with span ID: {top_level_span.get_span_context().span_id} and trace ID: {top_level_span.get_span_context().trace_id}")
+        yield span
+
+
+
+@contextmanager
+def trace_span(
+    name: str, 
+) -> Generator[trace.Span, None, None]:
+    """
+    Context manager for creating and managing OpenTelemetry spans.
+    
+    Args:
+        name: The name of the span
+        attributes: Optional attributes to set on the span
+        
+    Yields:
+        The created span instance
+    """
+    tracer = trace.get_tracer(MCP_SERVICE_NAME)
+    
+    with tracer.start_as_current_span(name) as span:
+        
+        try:
+            yield span
+        except Exception as e:
+            print(f"Error in span {name}: {e}")
+            raise
