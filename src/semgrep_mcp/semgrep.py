@@ -7,6 +7,7 @@ from typing import Any
 
 from mcp.shared.exceptions import McpError
 from mcp.types import INTERNAL_ERROR, ErrorData
+from opentelemetry import trace
 
 from semgrep_mcp.models import CodeFile
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
@@ -140,9 +141,11 @@ class SemgrepContext:
     process: asyncio.subprocess.Process
     stdin: asyncio.StreamWriter
     stdout: asyncio.StreamReader
+    top_level_span: trace.Span
 
-    def __init__(self, process: asyncio.subprocess.Process) -> None:
+    def __init__(self, process: asyncio.subprocess.Process, top_level_span: trace.Span) -> None:
         self.process = process
+        self.top_level_span = top_level_span
 
         if process.stdin is not None and process.stdout is not None:
             self.stdin = process.stdin

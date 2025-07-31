@@ -31,7 +31,7 @@ from semgrep_mcp.semgrep import (
     set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
-from utilities.tracing import initialize_tracing
+from utilities.tracing import start_tracing, with_span
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -292,7 +292,7 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext | No
     """Manage server startup and shutdown lifecycle."""
     # Initialize resources on startup with tracing
     # MCP requires Pro Engine  
-    with initialize_tracing("mcp-python-server") as span:
+    with start_tracing("mcp-python-server") as span:
         context = await run_semgrep_daemon()
 
     try:
@@ -690,7 +690,8 @@ async def semgrep_scan_rpc(
     temp_dir = None
     try:
         # TODO: perhaps should return more interpretable results?
-        cli_output = await run_semgrep_via_rpc(context, code_files)
+        with with_span(context.top_level_span, "semgrep_scan_rpc"):
+            cli_output = await run_semgrep_via_rpc(context, code_files)
         return cli_output
     except McpError as e:
         raise e
