@@ -2,7 +2,7 @@
 
 import os
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, Optional
+from typing import Generator
 
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
@@ -20,32 +20,33 @@ MCP_SERVICE_NAME = "mcp"
 top_level_span : trace.Span | None = None
 
 
-def get_trace_endpoint() -> str:
+def get_trace_endpoint() -> (str, str):
     """Get the appropriate trace endpoint based on environment."""
     env = os.environ.get("ENVIRONMENT", "dev").lower()
     
     if env == "prod":
-        return DEFAULT_TRACE_ENDPOINT
+        return (DEFAULT_TRACE_ENDPOINT, "prod")
     elif env == "local":
-        return DEFAULT_LOCAL_ENDPOINT
+        return (DEFAULT_LOCAL_ENDPOINT, "local")
     else:
-        return DEFAULT_DEV_ENDPOINT
+        return (DEFAULT_DEV_ENDPOINT, "dev")
 
 @contextmanager
-def initialize_tracing(name: str) -> None:
-    """Initialize OpenTelemetry tracing with basic configuration."""
+def initialize_tracing(name: str) -> Generator[trace.Span, None, None]:
+    """Initialize OpenTelemetry tracing."""
+
+    (endpoint, env) = get_trace_endpoint()
     
     # Create resource with basic attributes
     resource = Resource.create({
         SERVICE_NAME: MCP_SERVICE_NAME,
-        DEPLOYMENT_ENVIRONMENT: os.environ.get("ENVIRONMENT", "dev"),
+        DEPLOYMENT_ENVIRONMENT: env,
     })
     
     # Create tracer provider
     provider = TracerProvider(resource=resource)
     
     # Create OTLP exporter
-    endpoint = get_trace_endpoint()
     exporter = OTLPSpanExporter(endpoint=endpoint)
     
     # Create span processor
@@ -60,8 +61,11 @@ def initialize_tracing(name: str) -> None:
 
     with tracer.start_as_current_span(name) as span:
         top_level_span = span
+        # TODO: fix different trace id from datadog
+        # TODO: use logging
         print("Tracing initialized")
         print(f"Tracing initialized with span ID: {top_level_span.get_span_context().span_id} and trace ID: {top_level_span.get_span_context().trace_id}")
+        
         yield span
 
 
@@ -70,22 +74,7 @@ def initialize_tracing(name: str) -> None:
 def trace_span(
     name: str, 
 ) -> Generator[trace.Span, None, None]:
-    """
-    Context manager for creating and managing OpenTelemetry spans.
-    
-    Args:
-        name: The name of the span
-        attributes: Optional attributes to set on the span
-        
-    Yields:
-        The created span instance
-    """
     tracer = trace.get_tracer(MCP_SERVICE_NAME)
     
     with tracer.start_as_current_span(name) as span:
-        
-        try:
-            yield span
-        except Exception as e:
-            print(f"Error in span {name}: {e}")
-            raise
+        yield span
