@@ -38,6 +38,8 @@ classifiers = [
 dependencies = [
     "mcp>=1.12.0",
     "semgrep==1.128.1"
+    "opentelemetry-api>=1.25.0",
+    "opentelemetry-sdk>=1.25.0",
 ]
 
 [project.license]
