@@ -29,6 +29,7 @@ from semgrep_mcp.semgrep import (
     set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
+from utilities.tracing import initialize_tracing
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -279,9 +280,10 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 @asynccontextmanager
 async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
     """Manage server startup and shutdown lifecycle."""
-    # Initialize resources on startup
-    # MCP requires Pro Engine
-    process = await run_semgrep_process(["mcp", "--pro"])
+    # Initialize resources on startup with tracing
+    # MCP requires Pro Engine  
+    with initialize_tracing("mcp-python-server") as span:
+        process = await run_semgrep_process(["mcp", "--pro", "--debug"])
 
     try:
         yield SemgrepContext(process=process)
