@@ -29,7 +29,7 @@ from semgrep_mcp.semgrep import (
     set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
-from utilities.tracing import initialize_tracing
+from utilities.tracing import start_tracing, with_span
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -281,18 +281,18 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
     """Manage server startup and shutdown lifecycle."""
     # Initialize resources on startup with tracing
-    # MCP requires Pro Engine  
-    with initialize_tracing("mcp-python-server") as span:
+    # MCP requires Pro Engine
+    with start_tracing("mcp-python-server") as span:
         process = await run_semgrep_process(["mcp", "--pro", "--debug"])
 
-    try:
-        yield SemgrepContext(process=process)
-    finally:
-        if process.returncode is None:
-            # Clean up on shutdown
-            process.terminate()
-        else:
-            print(f"`semgrep mcp` process exited with code {process.returncode} already")
+        try:
+            yield SemgrepContext(process=process, top_level_span=span)
+        finally:
+            if process.returncode is None:
+                # Clean up on shutdown
+                process.terminate()
+            else:
+                print(f"`semgrep mcp` process exited with code {process.returncode} already")
 
 
 # Create a fast MCP server
@@ -675,7 +675,8 @@ async def semgrep_scan_rpc(
     temp_dir = None
     try:
         # TODO: perhaps should return more interpretable results?
-        cli_output = await run_semgrep_via_rpc(context, code_files)
+        with with_span(context.top_level_span, "semgrep_scan_rpc"):
+            cli_output = await run_semgrep_via_rpc(context, code_files)
         return cli_output
     except McpError as e:
         raise e
