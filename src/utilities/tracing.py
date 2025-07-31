@@ -42,7 +42,6 @@ def initialize_tracing(name: str) -> Generator[trace.Span, None, None]:
         SERVICE_NAME: MCP_SERVICE_NAME,
         DEPLOYMENT_ENVIRONMENT: env,
     })
-    
     # Create tracer provider
     provider = TracerProvider(resource=resource)
     
@@ -61,13 +60,12 @@ def initialize_tracing(name: str) -> Generator[trace.Span, None, None]:
 
     with tracer.start_as_current_span(name) as span:
         top_level_span = span
-        # TODO: fix different trace id from datadog
+        trace_id = trace.format_trace_id(top_level_span.get_span_context().trace_id)
         # TODO: use logging
         print("Tracing initialized")
-        print(f"Tracing initialized with span ID: {top_level_span.get_span_context().span_id} and trace ID: {top_level_span.get_span_context().trace_id}")
+        print(f"Tracing initialized with trace ID: {trace_id}")
         
         yield span
-
 
 
 @contextmanager
