@@ -100,3 +100,8 @@ max-complexity = 10
 packages = [
     "src/semgrep_mcp",
 ]
+
+[tool.pyright]
+exclude = [
+    "src/semgrep_mcp/semgrep_interfaces"
+]
