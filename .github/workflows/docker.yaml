@@ -79,6 +79,7 @@ jobs:
           annotations: ${{ steps.meta.outputs.annotations }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          submodules: true
 
       - name: Generate artifact attestation (ghcr.io)
         if: ${{ github.event_name != 'pull_request' }}
