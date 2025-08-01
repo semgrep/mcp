@@ -10,7 +10,6 @@ from typing import Any
 import click
 import httpx
 from mcp.server.fastmcp import Context, FastMCP
-from mcp.server.lowlevel import Server
 from mcp.shared.exceptions import McpError
 from mcp.types import (
     INTERNAL_ERROR,
@@ -278,7 +277,7 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 
 
 @asynccontextmanager
-async def server_lifespan(_server: Server) -> AsyncIterator[SemgrepContext]:
+async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
     """Manage server startup and shutdown lifecycle."""
     # Initialize resources on startup
     # MCP requires Pro Engine
