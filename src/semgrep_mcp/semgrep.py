@@ -179,7 +179,9 @@ class SemgrepContext:
 ################################################################################
 
 
-async def run_semgrep(args: list[str]) -> asyncio.subprocess.Process:
+async def run_semgrep(
+    top_level_span: trace.Span | None, args: list[str]
+) -> asyncio.subprocess.Process:
     """
     Runs semgrep with the given arguments as a subprocess, without waiting for it to finish.
     """
@@ -190,6 +192,13 @@ async def run_semgrep(args: list[str]) -> asyncio.subprocess.Process:
     # Just so we get the debug logs for the MCP server
     env = os.environ.copy()
     env["SEMGREP_LOG_SRCS"] = "mcp"
+    if top_level_span:
+        env["SEMGREP_TRACE_PARENT_SPAN_ID"] = trace.format_span_id(
+            top_level_span.get_span_context().span_id
+        )
+        env["SEMGREP_TRACE_PARENT_TRACE_ID"] = trace.format_trace_id(
+            top_level_span.get_span_context().trace_id
+        )
 
     # Execute semgrep command
     process = await asyncio.create_subprocess_exec(
@@ -212,7 +221,7 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | Non
 
     Returns None if the user doesn't have the Pro Engine installed.
     """
-    resp = await run_semgrep(["--pro", "--version"])
+    resp = await run_semgrep(top_level_span, ["--pro", "--version"])
 
     # wait for the command to exit so the exit code is set
     await resp.communicate()
@@ -227,15 +236,15 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | Non
 
         return None
     else:
-        process = await run_semgrep(["mcp", "--pro"])
+        process = await run_semgrep(top_level_span, ["mcp", "--pro"])
         return SemgrepContext(process=process, top_level_span=top_level_span)
 
 
-async def run_semgrep_output(args: list[str]) -> str:
+async def run_semgrep_output(top_level_span: trace.Span | None, args: list[str]) -> str:
     """
     Runs `semgrep` with the given arguments and returns the stdout.
     """
-    process = await run_semgrep(args)
+    process = await run_semgrep(top_level_span, args)
     stdout, stderr = await process.communicate()
 
     if process.returncode != 0:

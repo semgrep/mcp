@@ -303,7 +303,7 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext | No
 mcp = FastMCP(
     "Semgrep",
     stateless_http=True,
-    json_response=True,
+    json_response=True
     lifespan=server_lifespan,
 )
 
@@ -351,7 +351,7 @@ async def get_supported_languages() -> list[str]:
     args = ["show", "supported-languages", "--experimental"]
 
     # Parse output and return list of languages
-    languages = await run_semgrep_output(args)
+    languages = await run_semgrep_output(top_level_span=None, args=args)
     return [lang.strip() for lang in languages.strip().split("\n") if lang.strip()]
 
 
@@ -587,7 +587,7 @@ async def semgrep_scan_with_custom_rule(
 
         # Run semgrep scan with custom rule
         args = get_semgrep_scan_args(temp_dir, rule_file_path)
-        output = await run_semgrep_output(args)
+        output = await run_semgrep_output(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
         return results
@@ -632,7 +632,7 @@ async def semgrep_scan(
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
         args = get_semgrep_scan_args(temp_dir, config)
-        output = await run_semgrep_output(args)
+        output = await run_semgrep_output(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
         return results
@@ -740,7 +740,7 @@ async def semgrep_scan_local(
         results = []
         for cf in code_files:
             args = get_semgrep_scan_args(cf.path, config)
-            output = await run_semgrep_output(args)
+            output = await run_semgrep_output(top_level_span=None, args=args)
             result: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
             results.append(result)
         return results
@@ -796,7 +796,7 @@ Here are the details of the security issues found:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
         args = get_semgrep_scan_args(temp_dir)
-        output = await run_semgrep_output(args)
+        output = await run_semgrep_output(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
 
@@ -859,7 +859,7 @@ async def get_abstract_syntax_tree(
             "--json",
             temp_file_path,
         ]
-        return await run_semgrep_output(args)
+        return await run_semgrep_output(top_level_span=None, args=args)
 
     except McpError as e:
         raise e
