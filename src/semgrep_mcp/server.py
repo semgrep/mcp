@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-import asyncio
 import os
 import shutil
-import subprocess
 import tempfile
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
 import click
 import httpx
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.lowlevel import Server
 from mcp.shared.exceptions import McpError
 from mcp.types import (
     INTERNAL_ERROR,
@@ -21,6 +22,14 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from semgrep_mcp.models import CodeFile, Finding, LocalCodeFile, SemgrepScanResult
+from semgrep_mcp.semgrep import (
+    SemgrepContext,
+    run_semgrep,
+    run_semgrep_process,
+    run_semgrep_via_rpc,
+    set_semgrep_executable,
+)
+from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -52,13 +61,8 @@ RULE_ID_FIELD = Field(description="Semgrep rule ID")
 # Global Variables
 # ---------------------------------------------------------------------------------
 
-# Global variable to store the semgrep executable path
-semgrep_executable: str | None = None
-_semgrep_lock = asyncio.Lock()
-
 # Global variable to cache deployment slug
 DEPLOYMENT_SLUG: str | None = None
-
 
 # ---------------------------------------------------------------------------------
 # Utilities
@@ -129,102 +133,6 @@ def validate_config(config: str | None = None) -> str:
         return config or ""
     # Otherwise, treat as path and validate
     return validate_absolute_path(config, "config")
-
-
-# Semgrep utilities
-def find_semgrep_path() -> str | None:
-    """
-    Dynamically find semgrep in PATH or common installation directories
-    Returns: Path to semgrep executable or None if not found
-    """
-    # Common paths where semgrep might be installed
-    common_paths = [
-        "semgrep",  # Default PATH
-        "/usr/local/bin/semgrep",
-        "/usr/bin/semgrep",
-        "/opt/homebrew/bin/semgrep",  # Homebrew on macOS
-        "/opt/semgrep/bin/semgrep",
-        "/home/linuxbrew/.linuxbrew/bin/semgrep",  # Homebrew on Linux
-        "/snap/bin/semgrep",  # Snap on Linux
-    ]
-
-    # Add Windows paths if on Windows
-    if os.name == "nt":
-        app_data = os.environ.get("APPDATA", "")
-        if app_data:
-            common_paths.extend(
-                [
-                    os.path.join(app_data, "Python", "Scripts", "semgrep.exe"),
-                    os.path.join(app_data, "npm", "semgrep.cmd"),
-                ]
-            )
-
-    # Try each path
-    for semgrep_path in common_paths:
-        # For 'semgrep' (without path), check if it's in PATH
-        if semgrep_path == "semgrep":
-            try:
-                subprocess.run(
-                    [semgrep_path, "--version"], check=True, capture_output=True, text=True
-                )
-                return semgrep_path
-            except (subprocess.SubprocessError, FileNotFoundError):
-                continue
-
-        # For absolute paths, check if the file exists before testing
-        if os.path.isabs(semgrep_path):
-            if not os.path.exists(semgrep_path):
-                continue
-
-            # Try executing semgrep at this path
-            try:
-                subprocess.run(
-                    [semgrep_path, "--version"], check=True, capture_output=True, text=True
-                )
-                return semgrep_path
-            except (subprocess.SubprocessError, FileNotFoundError):
-                continue
-
-    return None
-
-
-async def ensure_semgrep_available() -> str:
-    """
-    Ensures semgrep is available and sets the global path in a thread-safe manner
-
-    Returns:
-        Path to semgrep executable
-
-    Raises:
-        McpError: If semgrep is not installed or not found
-    """
-    global semgrep_executable
-
-    # Fast path - check if we already have the path
-    if semgrep_executable:
-        return semgrep_executable
-
-    # Slow path - acquire lock and find semgrep
-    async with _semgrep_lock:
-        # Try to find semgrep
-        semgrep_path = find_semgrep_path()
-
-        if not semgrep_path:
-            raise McpError(
-                ErrorData(
-                    code=INTERNAL_ERROR,
-                    message="Semgrep is not installed or not in your PATH. "
-                    "Please install Semgrep manually before using this tool. "
-                    "Installation options: "
-                    "pip install semgrep, "
-                    "macOS: brew install semgrep, "
-                    "Or refer to https://semgrep.dev/docs/getting-started/",
-                )
-            )
-
-        # Store the path for future use
-        semgrep_executable = semgrep_path
-        return semgrep_path
 
 
 # Utility functions for handling code content
@@ -334,38 +242,6 @@ def validate_code_files(code_files: list[CodeFile]) -> None:
             )
 
 
-async def run_semgrep(args: list[str]) -> str:
-    """
-    Runs semgrep with the given arguments
-
-    Args:
-        args: List of command arguments
-
-    Returns:
-        Output of semgrep command
-    """
-
-    # Ensure semgrep is available
-    semgrep_path = await ensure_semgrep_available()
-
-    # Execute semgrep command
-    process = await asyncio.create_subprocess_exec(
-        semgrep_path, *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
-    )
-
-    stdout, stderr = await process.communicate()
-
-    if process.returncode != 0:
-        raise McpError(
-            ErrorData(
-                code=INTERNAL_ERROR,
-                message=f"Error running semgrep: ({process.returncode}) {stderr.decode()}",
-            )
-        )
-
-    return stdout.decode()
-
-
 def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> None:
     """
     Clean the results from semgrep by converting temporary file paths back to
@@ -400,6 +276,24 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 # MCP Server
 # ---------------------------------------------------------------------------------
 
+
+@asynccontextmanager
+async def server_lifespan(_server: Server) -> AsyncIterator[SemgrepContext]:
+    """Manage server startup and shutdown lifecycle."""
+    # Initialize resources on startup
+    # MCP requires Pro Engine
+    process = await run_semgrep_process(["mcp", "--pro"])
+
+    try:
+        yield SemgrepContext(process=process)
+    finally:
+        if process.returncode is None:
+            # Clean up on shutdown
+            process.terminate()
+        else:
+            print(f"`semgrep mcp` process exited with code {process.returncode} already")
+
+
 # Create a fast MCP server
 mcp = FastMCP(
     "Semgrep",
@@ -407,6 +301,7 @@ mcp = FastMCP(
     request_timeout=DEFAULT_TIMEOUT,
     stateless_http=True,
     json_response=True,
+    lifespan=server_lifespan,
 )
 
 http_client = httpx.AsyncClient()
@@ -757,6 +652,50 @@ async def semgrep_scan(
 
 
 @mcp.tool()
+async def semgrep_scan_rpc(
+    ctx: Context,
+    code_files: list[CodeFile] = CODE_FILES_FIELD,
+) -> CliOutput:
+    """
+    Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
+
+    This should run much faster than the comparative `semgrep_scan` tool.
+
+    Use this tool when you need to:
+      - scan code files for security vulnerabilities
+      - scan code files for other issues
+      - scan quickly
+    """
+
+    # Validate code_files
+    # TODO: could this be slow if content is big?
+    validate_code_files(code_files)
+
+    context: SemgrepContext = ctx.request_context.lifespan_context
+
+    temp_dir = None
+    try:
+        # TODO: perhaps should return more interpretable results?
+        cli_output = await run_semgrep_via_rpc(context, code_files)
+        return cli_output
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+        ) from e
+
+    finally:
+        if temp_dir:
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@mcp.tool()
 async def semgrep_scan_local(
     code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
@@ -1072,13 +1011,25 @@ async def health(request: Request) -> JSONResponse:
     envvar="MCP_TRANSPORT",
     help="Transport protocol to use: stdio, streamable-http, or sse (legacy)",
 )
-def main(transport: str) -> None:
+@click.option(
+    "--semgrep-path",
+    type=click.Path(exists=True),
+    default=None,
+    envvar="SEMGREP_PATH",
+    help="Path to the Semgrep binary",
+)
+def main(transport: str, semgrep_path: str | None) -> None:
     """Entry point for the MCP server
 
     Supports stdio, streamable-http, and sse transports.
     For stdio, it will read from stdin and write to stdout.
     For streamable-http and sse, it will start an HTTP server on port 8000.
     """
+
+    # Set the executable path in case it's manually specified.
+    if semgrep_path:
+        set_semgrep_executable(semgrep_path)
+
     if transport == "stdio":
         mcp.run(transport="stdio")
     elif transport == "streamable-http":
