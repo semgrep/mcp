@@ -297,8 +297,6 @@ async def server_lifespan(_server: Server) -> AsyncIterator[SemgrepContext]:
 # Create a fast MCP server
 mcp = FastMCP(
     "Semgrep",
-    version=__version__,
-    request_timeout=DEFAULT_TIMEOUT,
     stateless_http=True,
     json_response=True,
     lifespan=server_lifespan,
