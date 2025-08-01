@@ -1,0 +1,3 @@
+[submodule "src/semgrep_mcp/semgrep_interfaces"]
+	path = src/semgrep_mcp/semgrep_interfaces
+	url = https://github.com/semgrep/semgrep-interfaces.git
