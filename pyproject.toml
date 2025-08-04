@@ -37,7 +37,7 @@ classifiers = [
 ]
 dependencies = [
     "mcp>=1.12.0",
-    "semgrep==1.128.1"
+    "semgrep==1.131.0",
 ]
 
 [project.license]
