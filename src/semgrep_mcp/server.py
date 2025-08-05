@@ -283,7 +283,7 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
     # Initialize resources on startup with tracing
     # MCP requires Pro Engine
     with start_tracing("mcp-python-server") as span:
-        process = await run_semgrep_process(["mcp", "--pro", "--debug"])
+        process = await run_semgrep_process(["mcp", "--pro"])
 
         try:
             yield SemgrepContext(process=process, top_level_span=span)
