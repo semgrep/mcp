@@ -283,7 +283,7 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
     # Initialize resources on startup with tracing
     # MCP requires Pro Engine
     with start_tracing("mcp-python-server") as span:
-        process = await run_semgrep_process(["mcp", "--pro"])
+        process = await run_semgrep_process(top_level_span=span, args=["mcp", "--pro"])
 
         try:
             yield SemgrepContext(process=process, top_level_span=span)
@@ -347,7 +347,7 @@ async def get_supported_languages() -> list[str]:
     args = ["show", "supported-languages", "--experimental"]
 
     # Parse output and return list of languages
-    languages = await run_semgrep(args)
+    languages = await run_semgrep(top_level_span=None, args=args)
     return [lang.strip() for lang in languages.strip().split("\n") if lang.strip()]
 
 
@@ -583,7 +583,7 @@ async def semgrep_scan_with_custom_rule(
 
         # Run semgrep scan with custom rule
         args = get_semgrep_scan_args(temp_dir, rule_file_path)
-        output = await run_semgrep(args)
+        output = await run_semgrep(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
         return results
@@ -628,7 +628,7 @@ async def semgrep_scan(
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
         args = get_semgrep_scan_args(temp_dir, config)
-        output = await run_semgrep(args)
+        output = await run_semgrep(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
         return results
@@ -728,7 +728,7 @@ async def semgrep_scan_local(
         results = []
         for cf in code_files:
             args = get_semgrep_scan_args(cf.path, config)
-            output = await run_semgrep(args)
+            output = await run_semgrep(top_level_span=None, args=args)
             result: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
             results.append(result)
         return results
@@ -784,7 +784,7 @@ Here are the details of the security issues found:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
         args = get_semgrep_scan_args(temp_dir)
-        output = await run_semgrep(args)
+        output = await run_semgrep(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
 
@@ -847,7 +847,7 @@ async def get_abstract_syntax_tree(
             "--json",
             temp_file_path,
         ]
-        return await run_semgrep(args)
+        return await run_semgrep(top_level_span=None, args=args)
 
     except McpError as e:
         raise e
