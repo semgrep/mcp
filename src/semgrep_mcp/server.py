@@ -187,7 +187,9 @@ def create_temp_files_from_code_content(code_files: list[CodeFile]) -> str:
         ) from e
 
 
-def get_semgrep_scan_args(temp_dir: str, config: str | None = None) -> list[str]:
+def get_semgrep_scan_args(
+    temp_dir: str, config: str | None = None, scan_type: str = "code"
+) -> list[str]:
     """
     Builds command arguments for semgrep scan
 
@@ -202,10 +204,38 @@ def get_semgrep_scan_args(temp_dir: str, config: str | None = None) -> list[str]
     # Build command arguments and just run semgrep scan
     # if no config is provided to allow for either the default "auto"
     # or whatever the logged in config is
-    args = ["scan", "--json", "--experimental"]  # avoid the extra exec
-    if config:
-        args.extend(["--config", config])
-    args.append(temp_dir)
+    args = ["ci", "--json", "--dry-run"]  # avoid the extra exec
+    api_token = os.environ.get("SEMGREP_API_TOKEN")
+    match scan_type:
+        case "code":
+            args.append("--code")
+        case "supply-chain":
+            if not api_token:
+                raise McpError(
+                    ErrorData(
+                        code=INVALID_PARAMS,
+                        message="SEMGREP_API_TOKEN environment variable "
+                                "must be set to use this tool. Create a "
+                                "token at semgrep.dev to continue.",
+                    )
+                )
+            args.append("--supply-chain")
+        case "secret":
+            if not api_token:
+                raise McpError(
+                    ErrorData(
+                        code=INVALID_PARAMS,
+                        message="SEMGREP_API_TOKEN environment variable "
+                                "must be set to use this tool. Create a "
+                                "token at semgrep.dev to continue.",
+                    )
+                )
+            args.append("--secrets")
+        case _:
+            raise McpError(
+                ErrorData(code=INVALID_PARAMS, message=f"Invalid scan type: {scan_type}")
+            )
+    args.extend(["--include", temp_dir])
     return args
 
 
@@ -607,6 +637,7 @@ async def semgrep_scan_with_custom_rule(
 async def semgrep_scan(
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
+    scan_type: str = "code",
 ) -> SemgrepScanResult:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
@@ -614,6 +645,14 @@ async def semgrep_scan(
     Use this tool when you need to:
       - scan code files for security vulnerabilities
       - scan code files for other issues
+
+    Args:
+        code_files: The code files to scan.
+        config: The Semgrep config to use.
+        scan_type: The type of scan to run.
+            - "code": Scan code files.
+            - "supply-chain": Scan code files for CI/CD.
+            - "secrets": Scan code files for secrets.
     """
     # Validate config
     config = validate_config(config)
@@ -625,7 +664,7 @@ async def semgrep_scan(
     try:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
-        args = get_semgrep_scan_args(temp_dir, config)
+        args = get_semgrep_scan_args(temp_dir, config, scan_type)
         output = await run_semgrep(args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
