@@ -1,5 +1,13 @@
-# Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS uv
+# Use the latest as a default, but allow it to be overriden in case we
+# want to publish images with different versions of Semgrep.
+ARG BASE_IMAGE=semgrep/semgrep:latest
+
+# Use the Semgrep image, so that we can select which version of
+# Semgrep we want to distribute with.
+FROM ${BASE_IMAGE}
+
+# Add `uv` to the image
+RUN apk update && apk add py3-uv
 
 # Install the project into `/app`
 WORKDIR /app
@@ -22,14 +30,14 @@ ADD . /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install .
 
-FROM python:3.13-slim-bookworm
+# Uninstall, because we want to use the base image's version of Semgrep.
+RUN uv pip uninstall semgrep
 
-WORKDIR /app
+# need this for `useradd` right after
+RUN apk add shadow
 
 # Create non-root user
 RUN useradd -m app
-
-COPY --from=uv --chown=app:app /app/.venv /app/.venv
 
 # Place executables in the environment at the front of the path
 ENV PATH="/app/.venv/bin:$PATH" \
