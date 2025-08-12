@@ -7,6 +7,7 @@ from typing import Any
 
 from mcp.shared.exceptions import McpError
 from mcp.types import INTERNAL_ERROR, ErrorData
+from opentelemetry import trace
 
 from semgrep_mcp.models import CodeFile
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
@@ -140,9 +141,11 @@ class SemgrepContext:
     process: asyncio.subprocess.Process
     stdin: asyncio.StreamWriter
     stdout: asyncio.StreamReader
+    top_level_span: trace.Span
 
-    def __init__(self, process: asyncio.subprocess.Process) -> None:
+    def __init__(self, process: asyncio.subprocess.Process, top_level_span: trace.Span) -> None:
         self.process = process
+        self.top_level_span = top_level_span
 
         if process.stdin is not None and process.stdout is not None:
             self.stdin = process.stdin
@@ -203,13 +206,16 @@ async def run_semgrep(args: list[str]) -> asyncio.subprocess.Process:
     return process
 
 
-async def run_semgrep_daemon() -> SemgrepContext | None:
+async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | None:
     """
     Runs the semgrep daemon (`semgrep mcp`) if the user has the Pro Engine installed.
 
     Returns None if the user doesn't have the Pro Engine installed.
     """
     resp = await run_semgrep(["--pro", "--version"])
+
+    # wait for the command to exit so the exit code is set
+    await resp.communicate()
 
     # The user doesn't seem to have the Pro Engine installed.
     # That's fine, let's just run the free engine, without the
@@ -222,7 +228,7 @@ async def run_semgrep_daemon() -> SemgrepContext | None:
         return None
     else:
         process = await run_semgrep(["mcp", "--pro"])
-        return SemgrepContext(process=process)
+        return SemgrepContext(process=process, top_level_span=top_level_span)
 
 
 async def run_semgrep_output(args: list[str]) -> str:
