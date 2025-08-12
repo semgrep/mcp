@@ -236,7 +236,7 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | Non
 
         return None
     else:
-        process = await run_semgrep(top_level_span, ["mcp", "--pro"])
+        process = await run_semgrep(top_level_span, ["mcp", "--pro", "--trace"])
         return SemgrepContext(process=process, top_level_span=top_level_span)
 
 
