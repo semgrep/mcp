@@ -295,11 +295,11 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext | No
     with start_tracing("mcp-python-server") as span:
         context = await run_semgrep_daemon(top_level_span=span)
 
-    try:
-        yield context
-    finally:
-        if context is not None:
-            context.shutdown()
+        try:
+            yield context
+        finally:
+            if context is not None:
+                context.shutdown()
 
 
 # Create a fast MCP server
