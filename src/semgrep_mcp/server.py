@@ -291,9 +291,9 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext | None]:
     """Manage server startup and shutdown lifecycle."""
     # Initialize resources on startup with tracing
-    # MCP requires Pro Engine  
+    # MCP requires Pro Engine
     with start_tracing("mcp-python-server") as span:
-        context = await run_semgrep_daemon()
+        context = await run_semgrep_daemon(top_level_span=span)
 
     try:
         yield context

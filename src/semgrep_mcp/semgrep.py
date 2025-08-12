@@ -206,7 +206,7 @@ async def run_semgrep(args: list[str]) -> asyncio.subprocess.Process:
     return process
 
 
-async def run_semgrep_daemon() -> SemgrepContext | None:
+async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | None:
     """
     Runs the semgrep daemon (`semgrep mcp`) if the user has the Pro Engine installed.
 
@@ -225,7 +225,7 @@ async def run_semgrep_daemon() -> SemgrepContext | None:
         return None
     else:
         process = await run_semgrep(["mcp", "--pro"])
-        return SemgrepContext(process=process)
+        return SemgrepContext(process=process, top_level_span=top_level_span)
 
 
 async def run_semgrep_output(args: list[str]) -> str:
