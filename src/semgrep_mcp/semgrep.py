@@ -226,6 +226,9 @@ async def run_semgrep_daemon() -> SemgrepContext | None:
 
 
 async def run_semgrep_output(args: list[str]) -> str:
+    """
+    Runs `semgrep` with the given arguments and returns the stdout.
+    """
     process = await run_semgrep(args)
     stdout, stderr = await process.communicate()
 
