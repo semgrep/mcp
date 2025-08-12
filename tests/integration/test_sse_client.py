@@ -26,7 +26,10 @@ def sse_server():
 
 @pytest.mark.asyncio
 async def test_sse_client_smoke(sse_server):
-    async with sse_client(f"{base_url}/sse") as (read_stream, write_stream):
+    async with sse_client(f"{base_url}/sse", headers={"Authorization": "Bearer 1234567890"}) as (
+        read_stream,
+        write_stream,
+    ):
         async with ClientSession(read_stream, write_stream) as session:
             # Initializing session...
             await session.initialize()

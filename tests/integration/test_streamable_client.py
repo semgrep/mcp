@@ -24,7 +24,9 @@ def streamable_server():
 
 @pytest.mark.asyncio
 async def test_streamable_client_smoke(streamable_server):
-    async with streamablehttp_client(f"{base_url}/mcp") as (read_stream, write_stream, _):
+    async with streamablehttp_client(
+        f"{base_url}/mcp", headers={"Authorization": "Bearer 1234567890"}
+    ) as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
             # Initializing session...
             await session.initialize()
