@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import logging
 import os
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -60,9 +61,9 @@ def start_tracing(name: str) -> Generator[trace.Span, None, None]:
 
     with tracer.start_as_current_span(name) as span:
         trace_id = trace.format_trace_id(span.get_span_context().trace_id)
-        # TODO: use logging
-        print("Tracing initialized")
-        print(f"Tracing initialized with trace ID: {trace_id}")
+
+        logging.info("Tracing initialized")
+        logging.info(f"Tracing initialized with trace ID: {trace_id}")
 
         yield span
 

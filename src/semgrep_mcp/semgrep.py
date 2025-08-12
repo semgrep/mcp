@@ -214,6 +214,9 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | Non
     """
     resp = await run_semgrep(["--pro", "--version"])
 
+    # wait for the command to exit so the exit code is set
+    await resp.communicate()
+
     # The user doesn't seem to have the Pro Engine installed.
     # That's fine, let's just run the free engine, without the
     # `semgrep mcp` backend.
