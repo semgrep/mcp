@@ -7,10 +7,6 @@ on:
         description: 'Version of semgrep to use'
         required: true
         type: string
-  pull_request:
-    types: [opened, synchronize]
-    branches:
-      - main
 
 env:
   PYTHON_VERSION: 3.9
