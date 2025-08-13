@@ -14,15 +14,17 @@ ENV UV_LINK_MODE=copy
 
 ENV PATH="/app/.venv/bin:${PATH}"
 
+# Copy just these files and install dependencies to improve caching
+COPY --chown=app pyproject.toml .
+COPY --chown=app uv.lock .
+
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project --no-dev --no-editable
 
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
-ADD . /app
+COPY --chown=app . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install .
 
