@@ -406,12 +406,6 @@ http_client = httpx.AsyncClient()
 
 
 @mcp.tool()
-async def test_tool() -> str:
-    access_token = get_access_token()
-    return f"access_token: {access_token.token if access_token else None}"
-
-
-@mcp.tool()
 async def semgrep_rule_schema() -> str:
     """
     Get the schema for a Semgrep rule
