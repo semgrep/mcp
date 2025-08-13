@@ -24,7 +24,7 @@ Your contributions to this project are most welcome! Please see the ["good first
 1. Clone this repository.
 1. Build the server:
    ```bash
-   docker build -t semgrep-mcp .
+   SEMGREP_APP_TOKEN=<app token> docker buildx build -t semgrep-mcp-server . --secret id=semgrep_app_token,env=SEMGREP_APP_TOKEN
    ```
 
 ## Run the MCP server
@@ -86,7 +86,7 @@ By default, the MCP server runs on `http://localhost:8000` with the inspector se
 
    ```bash
    # takes one argument {patch, minor, major} with 'minor' as the default argument
-   uv run python ./scripts/bump_version.py 
+   uv run python ./scripts/bump_version.py
    ```
 
 1. Verify the release diff looks correct, and add [changelog](CHANGELOG.md) notes.
@@ -103,6 +103,6 @@ By default, the MCP server runs on `http://localhost:8000` with the inspector se
    git push origin vX.Y.Z
    ```
 
-1. Manually approve the [`publish.yaml`](https://github.com/semgrep/mcp/actions/workflows/publish.yml) workflow.
+. Manually approve the [`publish.yaml`](https://github.com/semgrep/mcp/actions/workflows/publish.yml) workflow.
 
-1. Verify the release looks good on [PyPI](https://pypi.org/p/semgrep-mcp).
+8. Verify the release looks good on [PyPI](https://pypi.org/p/semgrep-mcp).
