@@ -374,7 +374,7 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext | No
     """Manage server startup and shutdown lifecycle."""
     # Initialize resources on startup with tracing
     # MCP requires Pro Engine
-    
+
     access_token = get_access_token()
     logging.info(f"access_token: {access_token.token if access_token else None}")
 
