@@ -1,0 +1,55 @@
+{
+  "name": "semgrep-mcp",
+  "version": "0.4.1",
+  "description": "MCP Server for using Semgrep to scan code",
+  "main": "dist/index.js",
+  "bin": {
+    "semgrep-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "test": "jest",
+    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "security",
+    "static-analysis",
+    "code-scanning",
+    "semgrep",
+    "mcp"
+  ],
+  "author": "Semgrep, Inc. <hello@semgrep.com>",
+  "contributors": [
+    "Seth Jaksik <seth@semgrep.com>",
+    "Drew Dennison <drew@semgrep.com>"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/semgrep/mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/semgrep/mcp/issues"
+  },
+  "homepage": "https://github.com/semgrep/mcp#readme",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.0.0",
+    "@typescript-eslint/parser": "^8.0.0",
+    "eslint": "^9.0.0",
+    "jest": "^29.0.0",
+    "@types/jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
