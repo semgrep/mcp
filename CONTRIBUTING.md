@@ -22,9 +22,11 @@ Your contributions to this project are most welcome! Please see the ["good first
 
 1. Install `docker` using their [installation instructions](https://docs.docker.com/get-started/get-docker/).
 1. Clone this repository.
+1. Run `semgrep login` to get a Semgrep API token if you have not already. Check
+   in `~/.semgrep/settings.yml`.
 1. Build the server:
    ```bash
-   docker build -t semgrep-mcp .
+   SEMGREP_API_TOKEN=<your token here> docker build -t semgrep-mcp . --secret id=semgrep_app_token,env=SEMGREP_API_TOKEN
    ```
 
 ## Run the MCP server
