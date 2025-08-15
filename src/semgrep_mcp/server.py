@@ -345,7 +345,7 @@ async def oauth_authorization_server() -> JSONResponse:
 @mcp.tool()
 async def semgrep_user_info() -> str:
     """
-    Get the user info for the current semgrep user. 
+    Get the user info for the current semgrep user.
     """
 
     # TODO remove before production
