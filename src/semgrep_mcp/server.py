@@ -10,6 +10,8 @@ from typing import Any
 
 import click
 import httpx
+from mcp.server.auth.middleware.auth_context import get_access_token
+from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.shared.exceptions import McpError
 from mcp.types import (
@@ -18,7 +20,7 @@ from mcp.types import (
     INVALID_REQUEST,
     ErrorData,
 )
-from pydantic import Field, ValidationError
+from pydantic import AnyHttpUrl, Field, ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -31,6 +33,7 @@ from semgrep_mcp.semgrep import (
     set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
+from semgrep_mcp.token_verifier import JWKSTokenVerifier
 from utilities.tracing import start_tracing, with_span
 
 # ---------------------------------------------------------------------------------
@@ -42,6 +45,10 @@ __version__ = "0.4.2"
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"
 SEMGREP_API_VERSION = "v1"
+
+AUTH_BASE_URL = os.getenv("SEMGREP_AUTH_URL", "https://login.semgrep.dev")
+SERVER_URL = os.getenv("SEMGREP_MCP_URL", "http://localhost:8000") # mcp.semgrep.ai in prod
+WORKOS_CLIENT_ID = os.getenv("WORKOS_CLIENT_ID", "client_01JWXZ4GZ3WP1BFWJ5YTE9JWK7") # not secret
 
 # Field definitions for function parameters
 CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
@@ -302,6 +309,20 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext | No
 # Create a fast MCP server
 mcp = FastMCP(
     "Semgrep",
+    # Token verifier for authentication
+    token_verifier=JWKSTokenVerifier(
+        jwks_endpoint=f"{AUTH_BASE_URL}/oauth2/jwks",
+        issuer=AUTH_BASE_URL,
+        audience=WORKOS_CLIENT_ID,
+    ),
+    # Auth settings for RFC 9728 Protected Resource Metadata
+    auth=AuthSettings(
+        # Authorization Server URL
+        issuer_url=AnyHttpUrl(AUTH_BASE_URL),
+        # This server's URL
+        resource_server_url=AnyHttpUrl(SERVER_URL),
+        required_scopes=["openid", "profile", "email"],
+    ),
     stateless_http=True,
     json_response=True,
     lifespan=server_lifespan,
@@ -309,10 +330,30 @@ mcp = FastMCP(
 
 http_client = httpx.AsyncClient()
 
+@mcp.custom_route("/.well-known/oauth-authorization-server", methods=["GET"])
+async def oauth_authorization_server(request: Request) -> JSONResponse:
+    """
+    Get the OAuth authorization server configuration for legacy clients
+    """
+    r = await http_client.get(f"{AUTH_BASE_URL}/.well-known/oauth-authorization-server")
+    return JSONResponse(content=r.json())
+
 # ---------------------------------------------------------------------------------
 # MCP Tools
 # ---------------------------------------------------------------------------------
 
+@mcp.tool()
+async def semgrep_user_info() -> str:
+    """
+    Get the user info for the current semgrep user.
+    """
+
+    # TODO remove before production
+    # demo getting access token only
+
+    access_token = get_access_token()
+    print(f"User token: {access_token}")
+    return "has access" if access_token else "no access"
 
 @mcp.tool()
 async def semgrep_rule_schema() -> str:
