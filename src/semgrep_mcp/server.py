@@ -331,7 +331,7 @@ mcp = FastMCP(
 http_client = httpx.AsyncClient()
 
 @mcp.custom_route("/.well-known/oauth-authorization-server", methods=["GET"])
-async def oauth_authorization_server() -> JSONResponse:
+async def oauth_authorization_server(request: Request) -> JSONResponse:
     """
     Get the OAuth authorization server configuration for legacy clients
     """
