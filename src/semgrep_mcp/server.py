@@ -37,8 +37,7 @@ from utilities.tracing import start_tracing, with_span
 # Constants
 # ---------------------------------------------------------------------------------
 
-__version__ = "0.4.1"
-DEFAULT_TIMEOUT = 300  # 5 mins in seconds
+__version__ = "0.4.2"
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"
@@ -47,9 +46,7 @@ SEMGREP_API_VERSION = "v1"
 # Field definitions for function parameters
 CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
 LOCAL_CODE_FILES_FIELD = Field(
-    description=(
-        "List of dictionaries with 'path' " "pointing to the absolute path of the code file"
-    )
+    description=("List of dictionaries with 'path' pointing to the absolute path of the code file")
 )
 
 CONFIG_FIELD = Field(
