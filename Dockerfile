@@ -1,6 +1,8 @@
 # Use a Python image with uv pre-installed
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS uv
 
+RUN useradd -m -u 10001 app
+USER app
 # Install the project into `/app`
 WORKDIR /app
 
@@ -10,33 +12,24 @@ ENV UV_COMPILE_BYTECODE=1
 # Copy from the cache instead of linking since it's a mounted volume
 ENV UV_LINK_MODE=copy
 
+ENV PATH="/app/.venv/bin:${PATH}"
+
+# Copy just these files and install dependencies to improve caching
+COPY --chown=app pyproject.toml .
+COPY --chown=app uv.lock .
+
 # Install the project's dependencies using the lockfile and settings
 RUN --mount=type=cache,target=/root/.cache/uv \
-    --mount=type=bind,source=uv.lock,target=uv.lock \
-    --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
     uv sync --frozen --no-install-project --no-dev --no-editable
 
 # Then, add the rest of the project source code and install it
 # Installing separately from its dependencies allows optimal layer caching
-ADD . /app
+COPY --chown=app . .
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install .
 
-FROM python:3.13-slim-bookworm
-
-WORKDIR /app
-
-# Create non-root user
-RUN useradd -m app
-
-COPY --from=uv --chown=app:app /app/.venv /app/.venv
-
-# Place executables in the environment at the front of the path
-ENV PATH="/app/.venv/bin:$PATH" \
-    PYTHONUNBUFFERED=1
-
-# Switch to non-root user
-USER app
+RUN --mount=type=secret,id=semgrep_app_token,required=true,env=SEMGREP_APP_TOKEN,uid=10001,gid=10001,mode=0440 \
+    uv run semgrep install-semgrep-pro
 
 EXPOSE 8000
 

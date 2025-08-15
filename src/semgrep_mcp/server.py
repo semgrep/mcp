@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import os
 import shutil
 import tempfile
@@ -14,6 +15,7 @@ from mcp.shared.exceptions import McpError
 from mcp.types import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
+    INVALID_REQUEST,
     ErrorData,
 )
 from pydantic import Field, ValidationError
@@ -23,19 +25,19 @@ from starlette.responses import JSONResponse
 from semgrep_mcp.models import CodeFile, Finding, LocalCodeFile, SemgrepScanResult
 from semgrep_mcp.semgrep import (
     SemgrepContext,
-    run_semgrep,
-    run_semgrep_process,
+    run_semgrep_daemon,
+    run_semgrep_output,
     run_semgrep_via_rpc,
     set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
+from utilities.tracing import start_tracing, with_span
 
 # ---------------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------------
 
-__version__ = "0.4.1"
-DEFAULT_TIMEOUT = 300  # 5 mins in seconds
+__version__ = "0.4.2"
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"
@@ -44,9 +46,7 @@ SEMGREP_API_VERSION = "v1"
 # Field definitions for function parameters
 CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
 LOCAL_CODE_FILES_FIELD = Field(
-    description=(
-        "List of dictionaries with 'path' " "pointing to the absolute path of the code file"
-    )
+    description=("List of dictionaries with 'path' pointing to the absolute path of the code file")
 )
 
 CONFIG_FIELD = Field(
@@ -62,6 +62,14 @@ RULE_ID_FIELD = Field(description="Semgrep rule ID")
 
 # Global variable to cache deployment slug
 DEPLOYMENT_SLUG: str | None = None
+
+
+# ---------------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------------
+
+
+logging.basicConfig(level=logging.INFO)
 
 # ---------------------------------------------------------------------------------
 # Utilities
@@ -277,20 +285,18 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 
 
 @asynccontextmanager
-async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
+async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext | None]:
     """Manage server startup and shutdown lifecycle."""
-    # Initialize resources on startup
+    # Initialize resources on startup with tracing
     # MCP requires Pro Engine
-    process = await run_semgrep_process(["mcp", "--pro"])
+    with start_tracing("mcp-python-server") as span:
+        context = await run_semgrep_daemon(top_level_span=span)
 
-    try:
-        yield SemgrepContext(process=process)
-    finally:
-        if process.returncode is None:
-            # Clean up on shutdown
-            process.terminate()
-        else:
-            print(f"`semgrep mcp` process exited with code {process.returncode} already")
+        try:
+            yield context
+        finally:
+            if context is not None:
+                context.shutdown()
 
 
 # Create a fast MCP server
@@ -345,7 +351,7 @@ async def get_supported_languages() -> list[str]:
     args = ["show", "supported-languages", "--experimental"]
 
     # Parse output and return list of languages
-    languages = await run_semgrep(args)
+    languages = await run_semgrep_output(args)
     return [lang.strip() for lang in languages.strip().split("\n") if lang.strip()]
 
 
@@ -581,7 +587,7 @@ async def semgrep_scan_with_custom_rule(
 
         # Run semgrep scan with custom rule
         args = get_semgrep_scan_args(temp_dir, rule_file_path)
-        output = await run_semgrep(args)
+        output = await run_semgrep_output(args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
         return results
@@ -626,7 +632,7 @@ async def semgrep_scan(
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
         args = get_semgrep_scan_args(temp_dir, config)
-        output = await run_semgrep(args)
+        output = await run_semgrep_output(args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
         return results
@@ -668,12 +674,21 @@ async def semgrep_scan_rpc(
     # TODO: could this be slow if content is big?
     validate_code_files(code_files)
 
-    context: SemgrepContext = ctx.request_context.lifespan_context
+    context: SemgrepContext | None = ctx.request_context.lifespan_context
+
+    if context is None:
+        error_string = """
+      Cannot run semgrep scan via RPC because there is no semgrep daemon running--most likely,
+      there is no Pro Engine installed. Try running `semgrep install-semgrep-pro` to install it.
+      """
+
+        raise McpError(ErrorData(code=INVALID_REQUEST, message=error_string))
 
     temp_dir = None
     try:
         # TODO: perhaps should return more interpretable results?
-        cli_output = await run_semgrep_via_rpc(context, code_files)
+        with with_span(context.top_level_span, "semgrep_scan_rpc"):
+            cli_output = await run_semgrep_via_rpc(context, code_files)
         return cli_output
     except McpError as e:
         raise e
@@ -725,7 +740,7 @@ async def semgrep_scan_local(
         results = []
         for cf in code_files:
             args = get_semgrep_scan_args(cf.path, config)
-            output = await run_semgrep(args)
+            output = await run_semgrep_output(args)
             result: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
             results.append(result)
         return results
@@ -781,7 +796,7 @@ Here are the details of the security issues found:
         # Create temporary files from code content
         temp_dir = create_temp_files_from_code_content(code_files)
         args = get_semgrep_scan_args(temp_dir)
-        output = await run_semgrep(args)
+        output = await run_semgrep_output(args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
 
@@ -844,7 +859,7 @@ async def get_abstract_syntax_tree(
             "--json",
             temp_file_path,
         ]
-        return await run_semgrep(args)
+        return await run_semgrep_output(args)
 
     except McpError as e:
         raise e

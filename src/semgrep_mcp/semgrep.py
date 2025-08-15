@@ -1,11 +1,13 @@
 import asyncio
 import json
+import logging
 import os
 import subprocess
 from typing import Any
 
 from mcp.shared.exceptions import McpError
 from mcp.types import INTERNAL_ERROR, ErrorData
+from opentelemetry import trace
 
 from semgrep_mcp.models import CodeFile
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
@@ -139,9 +141,11 @@ class SemgrepContext:
     process: asyncio.subprocess.Process
     stdin: asyncio.StreamWriter
     stdout: asyncio.StreamReader
+    top_level_span: trace.Span
 
-    def __init__(self, process: asyncio.subprocess.Process) -> None:
+    def __init__(self, process: asyncio.subprocess.Process, top_level_span: trace.Span) -> None:
         self.process = process
+        self.top_level_span = top_level_span
 
         if process.stdin is not None and process.stdout is not None:
             self.stdin = process.stdin
@@ -166,13 +170,16 @@ class SemgrepContext:
 
         return await self.communicate(json.dumps(payload))
 
+    def shutdown(self) -> None:
+        self.process.terminate()
+
 
 ################################################################################
 # Running Semgrep #
 ################################################################################
 
 
-async def run_semgrep_process(args: list[str]) -> asyncio.subprocess.Process:
+async def run_semgrep(args: list[str]) -> asyncio.subprocess.Process:
     """
     Runs semgrep with the given arguments as a subprocess, without waiting for it to finish.
     """
@@ -199,19 +206,36 @@ async def run_semgrep_process(args: list[str]) -> asyncio.subprocess.Process:
     return process
 
 
-async def run_semgrep(args: list[str]) -> str:
+async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | None:
     """
-    Runs semgrep with the given arguments
+    Runs the semgrep daemon (`semgrep mcp`) if the user has the Pro Engine installed.
 
-    Args:
-        args: List of command arguments
-
-    Returns:
-        Output of semgrep command
+    Returns None if the user doesn't have the Pro Engine installed.
     """
+    resp = await run_semgrep(["--pro", "--version"])
 
-    process = await run_semgrep_process(args)
+    # wait for the command to exit so the exit code is set
+    await resp.communicate()
 
+    # The user doesn't seem to have the Pro Engine installed.
+    # That's fine, let's just run the free engine, without the
+    # `semgrep mcp` backend.
+    if resp.returncode != 0:
+        logging.warning(
+            "User doesn't have the Pro Engine installed, not running `semgrep mcp` daemon..."
+        )
+
+        return None
+    else:
+        process = await run_semgrep(["mcp", "--pro"])
+        return SemgrepContext(process=process, top_level_span=top_level_span)
+
+
+async def run_semgrep_output(args: list[str]) -> str:
+    """
+    Runs `semgrep` with the given arguments and returns the stdout.
+    """
+    process = await run_semgrep(args)
     stdout, stderr = await process.communicate()
 
     if process.returncode != 0:
