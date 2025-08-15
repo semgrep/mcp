@@ -6,7 +6,6 @@ from typing import Any
 import jwt
 from jwt import PyJWKClient
 from mcp.server.auth.provider import AccessToken, TokenVerifier
-from mcp.shared.auth_utils import resource_url_from_server_url
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +22,11 @@ class JWKSTokenVerifier(TokenVerifier):
         self,
         jwks_endpoint: str,
         issuer: str,
-        server_url: str,
+        audience: str,
     ):
         self.jwks_endpoint = jwks_endpoint
         self.issuer = issuer
-        self.server_url = server_url
+        self.audience = audience
 
         # Initialize PyJWKClient for automatic JWKS handling
         self._jwk_client = PyJWKClient(self.jwks_endpoint)
@@ -73,32 +72,15 @@ class JWKSTokenVerifier(TokenVerifier):
                 public_key,
                 algorithms=["RS256"], # NEVER CHANGE THIS or read from the token
                 issuer=self.issuer,  # Validate issuer
-                audience=resource_url_from_server_url(self.server_url),  # Validate audience
+                audience=self.audience,  # Validate audience
                 options={
                     "require": ["exp", "iat", "iss", "aud"],
-                    "verify_signature": True,
-                    "verify_iss": True,
-                    "verify_exp": True,
-                    "verify_iat": True,
-                    "verify_aud": False, # TODO: Verify audience (need to figure out how to do this since Cursor does dynamic client registration)
                 },
                 leeway=10,
             )
 
             return payload
 
-        except jwt.ExpiredSignatureError:
-            logger.warning("JWT token has expired")
-            return None
-        except jwt.InvalidIssuerError:
-            logger.warning("Invalid JWT issuer")
-            return None
-        except jwt.InvalidAudienceError:
-            logger.warning("Invalid JWT audience")
-            return None
-        except jwt.InvalidTokenError as e:
-            logger.warning(f"Invalid JWT token: {e}")
-            return None
         except Exception as e:
             logger.warning(f"JWT validation error: {e}")
             return None

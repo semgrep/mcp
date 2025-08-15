@@ -47,8 +47,9 @@ SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"
 SEMGREP_API_VERSION = "v1"
 
-AUTH_BASE_URL = os.getenv("SEMGREP_AUTH_URL", "https://signin.semgrep.dev")
-SERVER_URL = os.getenv("SEMGREP_MCP_URL", "http://localhost:8000")
+AUTH_BASE_URL = os.getenv("SEMGREP_AUTH_URL", "https://signin.semgrep.dev") # might move to login.semgrep.dev
+SERVER_URL = os.getenv("SEMGREP_MCP_URL", "http://localhost:8000") # mcp.semgrep.ai in prod
+WORKOS_CLIENT_ID = os.getenv("WORKOS_CLIENT_ID", "client_01JWXZ4GZ3WP1BFWJ5YTE9JWK7") # not secret
 
 # Field definitions for function parameters
 CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
@@ -315,7 +316,7 @@ mcp = FastMCP(
     token_verifier=JWKSTokenVerifier(
         jwks_endpoint=f"{AUTH_BASE_URL}/oauth2/jwks",
         issuer=AUTH_BASE_URL,
-        server_url=SERVER_URL,
+        audience=WORKOS_CLIENT_ID,
     ),
     # Auth settings for RFC 9728 Protected Resource Metadata
     auth=AuthSettings(
