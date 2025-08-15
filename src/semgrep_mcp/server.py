@@ -11,7 +11,6 @@ from typing import Any
 import click
 import httpx
 from mcp.server.auth.middleware.auth_context import get_access_token
-from mcp.server.auth.provider import AccessToken, TokenVerifier
 from mcp.server.auth.settings import AuthSettings
 from mcp.server.fastmcp import Context, FastMCP
 from mcp.shared.exceptions import McpError
