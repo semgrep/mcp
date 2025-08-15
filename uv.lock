@@ -1157,6 +1157,8 @@ version = "0.4.2"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
     { name = "semgrep" },
 ]
 
@@ -1176,6 +1178,8 @@ dev = [
 requires-dist = [
     { name = "mcp", specifier = ">=1.12.4" },
     { name = "semgrep", specifier = "==1.131.0" },
+    { name = "opentelemetry-api", specifier = ">=1.25.0" },
+    { name = "opentelemetry-sdk", specifier = ">=1.25.0" },
 ]
 
 [package.metadata.requires-dev]
