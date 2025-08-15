@@ -66,6 +66,7 @@ dev-dependencies = [
     "tomli-w>=1.0.0",
     "pre-commit>=3.0.0",
     "pyright>=1.1.0",
+    "cryptography>=45.0.6",
 ]
 
 [tool.ruff]
