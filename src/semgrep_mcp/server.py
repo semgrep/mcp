@@ -47,7 +47,7 @@ SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"
 SEMGREP_API_VERSION = "v1"
 
-AUTH_BASE_URL = os.getenv("SEMGREP_AUTH_URL", "https://signin.semgrep.dev") # might move to login.semgrep.dev
+AUTH_BASE_URL = os.getenv("SEMGREP_AUTH_URL", "https://login.semgrep.dev")
 SERVER_URL = os.getenv("SEMGREP_MCP_URL", "http://localhost:8000") # mcp.semgrep.ai in prod
 WORKOS_CLIENT_ID = os.getenv("WORKOS_CLIENT_ID", "client_01JWXZ4GZ3WP1BFWJ5YTE9JWK7") # not secret
 
