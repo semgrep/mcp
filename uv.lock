@@ -1153,7 +1153,7 @@ wheels = [
 
 [[package]]
 name = "semgrep-mcp"
-version = "0.4.2"
+version = "0.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "mcp" },
@@ -1177,9 +1177,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "mcp", specifier = ">=1.12.4" },
-    { name = "semgrep", specifier = "==1.131.0" },
     { name = "opentelemetry-api", specifier = ">=1.25.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.25.0" },
+    { name = "semgrep", specifier = "==1.131.0" },
 ]
 
 [package.metadata.requires-dev]

@@ -1,4 +1,13 @@
 # Changelog
+## [0.5.0] - 2025-08-18
+
+- Add `semgrep_scan_rpc` tool
+- Add `semgrep rpc` daemon functionality, which allows spawning
+  a parallel `semgrep` process for logged-in users which can
+  scan faster
+- Fix: Bump `mcp` version so `FastMCP` constructor does not err
+
+
 ## [0.4.1] - 2025-06-30
 
 - Make MCP transport stateless and use JSON

@@ -37,7 +37,7 @@ from semgrep_mcp.utilities.tracing import start_tracing, with_span
 # Constants
 # ---------------------------------------------------------------------------------
 
-__version__ = "0.4.2"
+__version__ = "0.5.0"
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"
