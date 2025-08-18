@@ -1,4 +1,8 @@
 # Changelog
+## [0.5.1] - 2025-08-18
+
+- Fixed a bug where the `semgrep-interfaces` submodule could not be located properly
+
 ## [0.5.0] - 2025-08-18
 
 - Add `semgrep_scan_rpc` tool
