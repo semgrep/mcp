@@ -31,7 +31,7 @@ from semgrep_mcp.semgrep import (
     set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
-from utilities.tracing import start_tracing, with_span
+from semgrep_mcp.utilities.tracing import start_tracing, with_span
 
 # ---------------------------------------------------------------------------------
 # Constants
