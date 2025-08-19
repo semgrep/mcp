@@ -31,6 +31,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 RUN --mount=type=secret,id=semgrep_app_token,required=true,env=SEMGREP_APP_TOKEN,uid=10001,gid=10001,mode=0440 \
     uv run semgrep install-semgrep-pro
 
+# Clear out any detritus from the pro install (especially credentials)
+RUN rm -rf /home/app/.semgrep
+
 EXPOSE 8000
 
 # expose the server to the outside world otherwise it will only be accessible from inside the container
