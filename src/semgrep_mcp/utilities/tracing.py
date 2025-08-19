@@ -11,6 +11,8 @@ from opentelemetry.sdk.resources import DEPLOYMENT_ENVIRONMENT, SERVICE_NAME, Re
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
+from semgrep_mcp.semgrep import is_hosted
+
 # coupling: these need to be kept in sync with semgrep-proprietary/tracing.py
 DEFAULT_TRACE_ENDPOINT = "https://telemetry.semgrep.dev/v1/traces"
 DEFAULT_DEV_ENDPOINT = "https://telemetry.dev2.semgrep.dev/v1/traces"
@@ -41,6 +43,7 @@ def start_tracing(name: str) -> Generator[trace.Span, None, None]:
         {
             SERVICE_NAME: MCP_SERVICE_NAME,
             DEPLOYMENT_ENVIRONMENT: env,
+            "metrics.is_hosted": is_hosted(),
         }
     )
     # Create tracer provider

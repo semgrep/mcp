@@ -27,6 +27,18 @@ _SEMGREP_LOCK = asyncio.Lock()
 SEMGREP_EXECUTABLE: str | None = None
 
 ################################################################################
+# Helpers #
+################################################################################
+
+
+def is_hosted() -> bool:
+    """
+    Check if the user is using the hosted version of the MCP server.
+    """
+    return os.environ.get("SEMGREP_IS_HOSTED", "false").lower() == "true"
+
+
+################################################################################
 # Finding Semgrep #
 ################################################################################
 
@@ -232,6 +244,15 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | Non
     if resp.returncode != 0:
         logging.warning(
             "User doesn't have the Pro Engine installed, not running `semgrep mcp` daemon..."
+        )
+
+        return None
+    elif is_hosted():
+        logging.warning(
+            """
+            The `semgrep mcp` daemon is only available when the MCP server is ran locally.
+            User is using the hosted version of the MCP server, not running `semgrep mcp` daemon...
+            """
         )
 
         return None
