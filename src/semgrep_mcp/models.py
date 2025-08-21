@@ -127,3 +127,28 @@ class Finding(BaseModel):
     state_updated_at: datetime
     rule: Rule
     assistant: Assistant | None = None
+
+
+class SecureLibrary(BaseModel):
+    name: str = Field(description="Name of the secure library or framework")
+    description: str = Field(description="Description of what the library does")
+    repository_url: HttpUrl | None = Field(description="GitHub repository URL", default=None)
+    languages: list[str] = Field(description="Supported programming languages")
+    category: str = Field(description="Security category (e.g., 'XSS Prevention', 'CSRF Protection')")
+    github_stars: int | None = Field(description="Number of GitHub stars", default=None)
+    last_updated: str | None = Field(description="Last update date", default=None)
+
+
+class SemgrepRuleset(BaseModel):
+    name: str = Field(description="Name of the Semgrep ruleset")
+    url: HttpUrl | None = Field(description="URL to the ruleset", default=None)
+    description: str = Field(description="Description of what the ruleset covers")
+    relevance_score: float = Field(description="Score indicating relevance to the query (0-1)", default=0.0)
+
+
+class SecureDefaultRecommendation(BaseModel):
+    query: str = Field(description="Original user query")
+    recommended_libraries: list[SecureLibrary] = Field(description="List of recommended secure libraries")
+    semgrep_rulesets: list[SemgrepRuleset] = Field(description="Relevant Semgrep rulesets for secure usage")
+    best_practice_notes: list[str] = Field(description="Additional security best practice notes")
+    confidence_score: float = Field(description="Confidence score of the recommendations (0-1)", default=0.0)

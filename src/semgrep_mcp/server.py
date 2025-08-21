@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
+import json
 import logging
 import os
+import re
 import shutil
 import tempfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -22,7 +25,15 @@ from pydantic import Field, ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from semgrep_mcp.models import CodeFile, Finding, LocalCodeFile, SemgrepScanResult
+from semgrep_mcp.models import (
+    CodeFile,
+    Finding,
+    LocalCodeFile,
+    SecureDefaultRecommendation,
+    SecureLibrary,
+    SemgrepRuleset,
+    SemgrepScanResult,
+)
 from semgrep_mcp.semgrep import (
     SemgrepContext,
     run_semgrep_daemon,
@@ -882,6 +893,339 @@ async def get_abstract_syntax_tree(
         if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+# Cache for awesome-secure-defaults data
+SECURE_DEFAULTS_CACHE: dict[str, Any] = {
+    "data": None,
+    "last_updated": None,
+    "ttl_hours": 24,  # Cache for 24 hours
+}
+
+
+async def fetch_secure_defaults_data() -> list[dict[str, Any]]:
+    """Fetch and parse the awesome-secure-defaults repository data."""
+    now = datetime.now()
+    
+    # Check cache
+    if (
+        SECURE_DEFAULTS_CACHE["data"] is not None
+        and SECURE_DEFAULTS_CACHE["last_updated"] is not None
+        and now - SECURE_DEFAULTS_CACHE["last_updated"] < timedelta(hours=SECURE_DEFAULTS_CACHE["ttl_hours"])
+    ):
+        return SECURE_DEFAULTS_CACHE["data"]
+    
+    # Fetch fresh data from GitHub
+    try:
+        # Get the raw content of the README.md
+        url = "https://raw.githubusercontent.com/tldrsec/awesome-secure-defaults/main/README.md"
+        response = await http_client.get(url)
+        response.raise_for_status()
+        content = response.text
+        
+        # Parse the markdown table
+        libraries = []
+        lines = content.split("\n")
+        in_table = False
+        current_category = None
+        
+        for line in lines:
+            # Detect category headers
+            if line.startswith("## ") and not line.startswith("## Table"):
+                current_category = line.replace("## ", "").strip()
+                continue
+            
+            # Detect table rows (simple heuristic)
+            if "|" in line and current_category:
+                parts = [p.strip() for p in line.split("|")]
+                if len(parts) >= 4 and parts[1] and not parts[1].startswith("-"):
+                    # Extract library info
+                    name_part = parts[1]
+                    description = parts[2] if len(parts) > 2 else ""
+                    languages_part = parts[3] if len(parts) > 3 else ""
+                    
+                    # Extract name and URL from markdown link
+                    name_match = re.search(r'\[([^\]]+)\]\(([^)]+)\)', name_part)
+                    if name_match:
+                        name = name_match.group(1)
+                        url = name_match.group(2)
+                    else:
+                        name = name_part
+                        url = None
+                    
+                    # Parse languages
+                    languages = []
+                    if languages_part:
+                        # Remove badges and extract language names
+                        lang_matches = re.findall(r'(?:Python|JavaScript|TypeScript|Ruby|Go|Java|\.NET|C\+\+|C#|PHP|Rust|Swift|Kotlin)', languages_part, re.IGNORECASE)
+                        languages = list(set(lang.lower() for lang in lang_matches))
+                    
+                    if name and name != "Name":  # Skip header row
+                        libraries.append({
+                            "name": name,
+                            "description": description,
+                            "repository_url": url,
+                            "languages": languages,
+                            "category": current_category,
+                        })
+        
+        # Update cache
+        SECURE_DEFAULTS_CACHE["data"] = libraries
+        SECURE_DEFAULTS_CACHE["last_updated"] = now
+        
+        return libraries
+        
+    except Exception as e:
+        # If fetching fails, return cached data if available
+        if SECURE_DEFAULTS_CACHE["data"] is not None:
+            return SECURE_DEFAULTS_CACHE["data"]
+        raise e
+
+
+def match_query_to_libraries(query: str, libraries: list[dict[str, Any]]) -> list[SecureLibrary]:
+    """Match user query to relevant secure libraries."""
+    query_lower = query.lower()
+    matched_libraries = []
+    
+    # Keywords to look for
+    keywords = re.findall(r'\b\w+\b', query_lower)
+    
+    # Score each library
+    for lib in libraries:
+        score = 0.0
+        
+        # Check name match
+        if lib["name"].lower() in query_lower or any(kw in lib["name"].lower() for kw in keywords):
+            score += 0.4
+        
+        # Check description match
+        if lib.get("description") and any(kw in lib["description"].lower() for kw in keywords):
+            score += 0.3
+        
+        # Check category match
+        if lib.get("category") and any(kw in lib["category"].lower() for kw in keywords):
+            score += 0.2
+        
+        # Check language match
+        for lang in lib.get("languages", []):
+            if lang in query_lower:
+                score += 0.1
+                break
+        
+        if score > 0:
+            matched_libraries.append({
+                "library": SecureLibrary(
+                    name=lib["name"],
+                    description=lib.get("description", ""),
+                    repository_url=lib.get("repository_url"),
+                    languages=lib.get("languages", []),
+                    category=lib.get("category", "Security"),
+                ),
+                "score": score,
+            })
+    
+    # Sort by score and return top matches
+    matched_libraries.sort(key=lambda x: x["score"], reverse=True)
+    return [m["library"] for m in matched_libraries[:5]]  # Return top 5 matches
+
+
+def get_relevant_semgrep_rulesets(query: str, libraries: list[SecureLibrary]) -> list[SemgrepRuleset]:
+    """Get relevant Semgrep rulesets based on query and recommended libraries."""
+    rulesets = []
+    query_lower = query.lower()
+    
+    # Common security-focused rulesets
+    base_rulesets = [
+        {
+            "name": "security-audit",
+            "url": "https://semgrep.dev/p/security-audit",
+            "description": "High-confidence security rules for common vulnerabilities",
+            "keywords": ["security", "vulnerability", "audit", "owasp"],
+        },
+        {
+            "name": "jwt",
+            "url": "https://semgrep.dev/p/jwt",
+            "description": "Rules for secure JWT implementation",
+            "keywords": ["jwt", "token", "authentication", "auth"],
+        },
+        {
+            "name": "xss",
+            "url": "https://semgrep.dev/p/xss",
+            "description": "Cross-site scripting prevention rules",
+            "keywords": ["xss", "cross-site", "scripting", "sanitization", "html"],
+        },
+        {
+            "name": "sql-injection",
+            "url": "https://semgrep.dev/p/sql-injection",
+            "description": "SQL injection prevention rules",
+            "keywords": ["sql", "injection", "database", "query"],
+        },
+        {
+            "name": "command-injection",
+            "url": "https://semgrep.dev/p/command-injection",
+            "description": "Command injection prevention rules",
+            "keywords": ["command", "injection", "shell", "exec", "system"],
+        },
+        {
+            "name": "crypto",
+            "url": "https://semgrep.dev/p/crypto",
+            "description": "Cryptography best practices",
+            "keywords": ["crypto", "cryptography", "encryption", "hash", "cipher"],
+        },
+        {
+            "name": "flask",
+            "url": "https://semgrep.dev/p/flask",
+            "description": "Flask framework security rules",
+            "keywords": ["flask", "python", "web"],
+        },
+        {
+            "name": "django",
+            "url": "https://semgrep.dev/p/django",
+            "description": "Django framework security rules",
+            "keywords": ["django", "python", "web"],
+        },
+        {
+            "name": "react",
+            "url": "https://semgrep.dev/p/react",
+            "description": "React security best practices",
+            "keywords": ["react", "javascript", "jsx", "frontend"],
+        },
+    ]
+    
+    # Score and filter rulesets
+    for ruleset in base_rulesets:
+        score = 0.0
+        
+        # Check keyword matches
+        for keyword in ruleset["keywords"]:
+            if keyword in query_lower:
+                score += 0.3
+        
+        # Check library language matches
+        for lib in libraries:
+            for lang in lib.languages:
+                if lang in ruleset["keywords"]:
+                    score += 0.2
+                    break
+        
+        if score > 0:
+            rulesets.append(
+                SemgrepRuleset(
+                    name=ruleset["name"],
+                    url=ruleset["url"],
+                    description=ruleset["description"],
+                    relevance_score=min(score, 1.0),
+                )
+            )
+    
+    # Sort by relevance
+    rulesets.sort(key=lambda x: x.relevance_score, reverse=True)
+    return rulesets[:3]  # Return top 3 rulesets
+
+
+@mcp.tool()
+async def secure_defaults(
+    query: str = Field(description="Query describing the security requirement or library needed"),
+) -> SecureDefaultRecommendation:
+    """
+    Get secure default library recommendations and Semgrep rulesets for security requirements
+    
+    This tool provides:
+    - Recommended secure-by-default libraries for common security needs
+    - Relevant Semgrep rulesets to ensure secure usage
+    - Best practice notes for implementation
+    
+    Use this tool when you need to:
+    - Find secure authentication/authorization libraries
+    - Get recommendations for secure data handling (encryption, hashing, etc.)
+    - Identify libraries for preventing common vulnerabilities (XSS, CSRF, SQL injection)
+    - Get framework-specific security library recommendations
+    
+    Example queries:
+    - "I need a secure JWT library for Flask"
+    - "What's a good XSS prevention library for React?"
+    - "Recommend secure password hashing for Python"
+    - "Need CSRF protection for Django application"
+    """
+    
+    try:
+        # Fetch secure defaults data
+        libraries_data = await fetch_secure_defaults_data()
+        
+        # Match query to libraries
+        recommended_libraries = match_query_to_libraries(query, libraries_data)
+        
+        # Get relevant Semgrep rulesets
+        semgrep_rulesets = get_relevant_semgrep_rulesets(query, recommended_libraries)
+        
+        # Generate best practice notes based on the query
+        best_practices = []
+        query_lower = query.lower()
+        
+        if "jwt" in query_lower or "token" in query_lower:
+            best_practices.extend([
+                "Always validate JWT signatures and expiration times",
+                "Use short-lived tokens with refresh token rotation",
+                "Store sensitive data in HTTP-only cookies when possible",
+            ])
+        
+        if "password" in query_lower or "hash" in query_lower:
+            best_practices.extend([
+                "Use adaptive hashing algorithms like bcrypt, scrypt, or Argon2",
+                "Implement proper salt generation and storage",
+                "Consider implementing rate limiting for authentication attempts",
+            ])
+        
+        if "xss" in query_lower or "sanitiz" in query_lower:
+            best_practices.extend([
+                "Always sanitize user input before rendering in HTML",
+                "Use Content Security Policy (CSP) headers",
+                "Prefer templating engines with automatic escaping",
+            ])
+        
+        if "sql" in query_lower or "database" in query_lower:
+            best_practices.extend([
+                "Always use parameterized queries or prepared statements",
+                "Validate and sanitize all user inputs",
+                "Apply principle of least privilege for database connections",
+            ])
+        
+        if "csrf" in query_lower:
+            best_practices.extend([
+                "Implement CSRF tokens for all state-changing operations",
+                "Use SameSite cookie attribute when possible",
+                "Verify origin and referer headers for additional protection",
+            ])
+        
+        # Calculate confidence score
+        confidence = 0.0
+        if recommended_libraries:
+            confidence = min(len(recommended_libraries) * 0.2, 0.8)
+        if semgrep_rulesets:
+            confidence = min(confidence + 0.2, 1.0)
+        
+        return SecureDefaultRecommendation(
+            query=query,
+            recommended_libraries=recommended_libraries,
+            semgrep_rulesets=semgrep_rulesets,
+            best_practice_notes=best_practices[:5],  # Limit to 5 most relevant
+            confidence_score=confidence,
+        )
+        
+    except httpx.HTTPError as e:
+        raise McpError(
+            ErrorData(
+                code=INTERNAL_ERROR,
+                message=f"Failed to fetch secure defaults data: {e!s}",
+            )
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(
+                code=INTERNAL_ERROR,
+                message=f"Error processing secure defaults query: {e!s}",
+            )
+        ) from e
 
 
 # ---------------------------------------------------------------------------------
