@@ -24,7 +24,7 @@ from starlette.responses import JSONResponse
 from semgrep_mcp.models import CodeFile, Finding, LocalCodeFile, SemgrepScanResult
 from semgrep_mcp.semgrep import (
     SemgrepContext,
-    run_semgrep_daemon,
+    mk_context,
     run_semgrep_output,
     run_semgrep_via_rpc,
     set_semgrep_executable,
@@ -289,7 +289,7 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
     # Initialize resources on startup with tracing
     # MCP requires Pro Engine
     with start_tracing("mcp-python-server") as span:
-        context = await run_semgrep_daemon(top_level_span=span)
+        context = await mk_context(top_level_span=span)
 
         try:
             yield context
@@ -611,9 +611,14 @@ async def semgrep_scan_with_custom_rule(
 async def semgrep_scan(
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult:
+) -> SemgrepScanResult | CliOutput:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
+
+    Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
+    CLI scan, or an RPC-based scan.
+
+    Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
 
     Use this tool when you need to:
       - scan code files for security vulnerabilities
