@@ -711,7 +711,7 @@ async def semgrep_scan(
 
     paths = [cf.filename for cf in code_files]
 
-    if context.use_rpc:
+    if context.process is not None:
         if config is not None:
             # This should hopefully just cause the agent to call us back with
             # the correct parameters.
