@@ -1,4 +1,8 @@
 # Changelog
+## [0.6.0] - 2025-08-22
+
+- Fixed a bug breaking authentication when running the Semgrep daemon
+
 ## [0.5.1] - 2025-08-18
 
 - Fixed a bug where the `semgrep-interfaces` submodule could not be located properly
