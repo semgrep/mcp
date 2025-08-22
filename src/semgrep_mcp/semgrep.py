@@ -6,7 +6,7 @@ import subprocess
 from typing import Any
 
 from mcp.shared.exceptions import McpError
-from mcp.types import INTERNAL_ERROR, ErrorData
+from mcp.types import INTERNAL_ERROR, INVALID_REQUEST, ErrorData
 from opentelemetry import trace
 
 from semgrep_mcp.models import CodeFile
@@ -25,6 +25,18 @@ _SEMGREP_LOCK = asyncio.Lock()
 
 # Global variable to store the semgrep executable path
 SEMGREP_EXECUTABLE: str | None = None
+
+################################################################################
+# Helpers #
+################################################################################
+
+
+def is_hosted() -> bool:
+    """
+    Check if the user is using the hosted version of the MCP server.
+    """
+    return os.environ.get("SEMGREP_IS_HOSTED", "false").lower() == "true"
+
 
 ################################################################################
 # Finding Semgrep #
@@ -138,16 +150,30 @@ def set_semgrep_executable(semgrep_path: str) -> None:
 
 
 class SemgrepContext:
-    process: asyncio.subprocess.Process
-    stdin: asyncio.StreamWriter
-    stdout: asyncio.StreamReader
+    process: asyncio.subprocess.Process | None
+    stdin: asyncio.StreamWriter | None
+    stdout: asyncio.StreamReader | None
     top_level_span: trace.Span
 
-    def __init__(self, process: asyncio.subprocess.Process, top_level_span: trace.Span) -> None:
+    is_hosted: bool
+    pro_engine_available: bool
+
+    def __init__(
+        self,
+        top_level_span: trace.Span,
+        is_hosted: bool,
+        pro_engine_available: bool,
+        process: asyncio.subprocess.Process | None = None,
+    ) -> None:
         self.process = process
         self.top_level_span = top_level_span
+        self.is_hosted = is_hosted
+        self.pro_engine_available = pro_engine_available
 
-        if process.stdin is not None and process.stdout is not None:
+        if process is None:
+            self.stdin = None
+            self.stdout = None
+        elif process.stdin is not None and process.stdout is not None:
             self.stdin = process.stdin
             self.stdout = process.stdout
         else:
@@ -159,6 +185,14 @@ class SemgrepContext:
             )
 
     async def communicate(self, line: str) -> str:
+        if self.stdin is None or self.stdout is None:
+            raise McpError(
+                ErrorData(
+                    code=INTERNAL_ERROR,
+                    message="Semgrep process stdin/stdout not available",
+                )
+            )
+
         self.stdin.write(f"{line}\n".encode())
         await self.stdin.drain()
 
@@ -166,12 +200,28 @@ class SemgrepContext:
         return stdout.decode()
 
     async def send_request(self, request: str, **kwargs: Any) -> str:
+        if self.is_hosted:
+            error_string = """
+                Cannot run semgrep scan via RPC because the MCP server is hosted.
+                RPC is only available when the MCP server is running locally.
+                Use the `semgrep_scan` tool instead.
+                """
+            raise McpError(ErrorData(code=INVALID_REQUEST, message=error_string))
+
+        if not self.pro_engine_available:
+            error_string = """
+                Cannot run semgrep scan via RPC because the Pro Engine is not installed.
+                Try running `semgrep install-semgrep-pro` to install it.
+                """
+            raise McpError(ErrorData(code=INVALID_REQUEST, message=error_string))
+
         payload = {"method": request, **kwargs}
 
         return await self.communicate(json.dumps(payload))
 
     def shutdown(self) -> None:
-        self.process.terminate()
+        if self.process is not None:
+            self.process.terminate()
 
 
 ################################################################################
@@ -215,12 +265,14 @@ async def run_semgrep(
     return process
 
 
-async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | None:
+async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext:
     """
-    Runs the semgrep daemon (`semgrep mcp`) if the user has the Pro Engine installed.
+    Runs the semgrep daemon (`semgrep mcp`) if the user has the Pro Engine installed
+    and is running the MCP server locally.
+    """
+    process = None
+    pro_engine_available = True
 
-    Returns None if the user doesn't have the Pro Engine installed.
-    """
     resp = await run_semgrep(top_level_span, ["--pro", "--version"])
 
     # wait for the command to exit so the exit code is set
@@ -233,11 +285,23 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext | Non
         logging.warning(
             "User doesn't have the Pro Engine installed, not running `semgrep mcp` daemon..."
         )
-
-        return None
+        pro_engine_available = False
+    elif is_hosted():
+        logging.warning(
+            """
+            The `semgrep mcp` daemon is only available when the MCP server is ran locally.
+            User is using the hosted version of the MCP server, not running `semgrep mcp` daemon...
+            """
+        )
     else:
         process = await run_semgrep(top_level_span, ["mcp", "--pro", "--trace"])
-        return SemgrepContext(process=process, top_level_span=top_level_span)
+
+    return SemgrepContext(
+        top_level_span=top_level_span,
+        is_hosted=is_hosted(),
+        pro_engine_available=pro_engine_available,
+        process=process,
+    )
 
 
 async def run_semgrep_output(top_level_span: trace.Span | None, args: list[str]) -> str:
