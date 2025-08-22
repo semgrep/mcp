@@ -607,18 +607,12 @@ async def semgrep_scan_with_custom_rule(
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-@mcp.tool()
-async def semgrep_scan(
+async def semgrep_scan_cli(
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult | CliOutput:
+) -> SemgrepScanResult:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
-
-    Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
-    CLI scan, or an RPC-based scan.
-
-    Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
 
     Use this tool when you need to:
       - scan code files for security vulnerabilities
@@ -626,9 +620,6 @@ async def semgrep_scan(
     """
     # Validate config
     config = validate_config(config)
-
-    # Validate code_files
-    validate_code_files(code_files)
 
     temp_dir = None
     try:
@@ -657,7 +648,6 @@ async def semgrep_scan(
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-@mcp.tool()
 async def semgrep_scan_rpc(
     ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
@@ -666,16 +656,7 @@ async def semgrep_scan_rpc(
     Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
 
     This should run much faster than the comparative `semgrep_scan` tool.
-
-    Use this tool when you need to:
-      - scan code files for security vulnerabilities
-      - scan code files for other issues
-      - scan quickly
     """
-
-    # Validate code_files
-    # TODO: could this be slow if content is big?
-    validate_code_files(code_files)
 
     context: SemgrepContext = ctx.request_context.lifespan_context
 
@@ -700,6 +681,53 @@ async def semgrep_scan_rpc(
         if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@mcp.tool()
+async def semgrep_scan(
+    ctx: Context,
+    code_files: list[CodeFile] = CODE_FILES_FIELD,
+    # TODO: currently only for CLI-based scans
+    config: str | None = CONFIG_FIELD,
+) -> SemgrepScanResult | CliOutput:
+    """
+    Runs a Semgrep scan on provided code content and returns the findings in JSON format
+
+    Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
+    CLI scan, or an RPC-based scan.
+
+    Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
+
+    Use this tool when you need to:
+      - scan code files for security vulnerabilities
+      - scan code files for other issues
+    """
+
+    validate_code_files(code_files)
+
+    context: SemgrepContext = ctx.request_context.lifespan_context
+
+    paths = [cf.filename for cf in code_files]
+
+    if context.use_rpc:
+        if config is not None:
+            # This should hopefully just cause the agent to call us back with
+            # the correct parameters.
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS,
+                    message="""
+                      `config` is not supported when using the RPC-based scan.
+                      Try calling again without that parameter set?
+                    """,
+                )
+            )
+
+        logging.info(f"Running RPC-based scan on paths: {paths}")
+        return await semgrep_scan_rpc(ctx, code_files)
+    else:
+        logging.info(f"Running CLI-based scan on paths: {paths}")
+        return await semgrep_scan_cli(code_files, config)
 
 
 @mcp.tool()
