@@ -270,6 +270,9 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext:
     Runs the semgrep daemon (`semgrep mcp`) if the user has the Pro Engine installed
     and is running the MCP server locally.
     """
+    process = None
+    pro_engine_available = True
+
     resp = await run_semgrep(top_level_span, ["--pro", "--version"])
 
     # wait for the command to exit so the exit code is set
@@ -282,10 +285,7 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext:
         logging.warning(
             "User doesn't have the Pro Engine installed, not running `semgrep mcp` daemon..."
         )
-
-        return SemgrepContext(
-            top_level_span=top_level_span, is_hosted=is_hosted(), pro_engine_available=False
-        )
+        pro_engine_available = False
     elif is_hosted():
         logging.warning(
             """
@@ -293,18 +293,15 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext:
             User is using the hosted version of the MCP server, not running `semgrep mcp` daemon...
             """
         )
-
-        return SemgrepContext(
-            top_level_span=top_level_span, is_hosted=True, pro_engine_available=True
-        )
     else:
         process = await run_semgrep(top_level_span, ["mcp", "--pro", "--trace"])
-        return SemgrepContext(
-            top_level_span=top_level_span,
-            is_hosted=False,
-            pro_engine_available=True,
-            process=process,
-        )
+
+    return SemgrepContext(
+        top_level_span=top_level_span,
+        is_hosted=is_hosted(),
+        pro_engine_available=pro_engine_available,
+        process=process,
+    )
 
 
 async def run_semgrep_output(top_level_span: trace.Span | None, args: list[str]) -> str:
