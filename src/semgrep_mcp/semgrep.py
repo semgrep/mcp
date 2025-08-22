@@ -217,7 +217,19 @@ class SemgrepContext:
 
         payload = {"method": request, **kwargs}
 
-        return await self.communicate(json.dumps(payload))
+        try:
+            return await self.communicate(json.dumps(payload))
+        except Exception as e:
+            # TODO: move this code out of send_request, make a proper result
+            # type and interpret at the call site
+            # this is not specific to semgrep_scan_rpc, but it is for now!!!
+            msg = f"""
+              Error sending request to semgrep (RPC server may not be running): {e}.
+              Try using `semgrep_scan` instead.
+            """
+            logging.error(msg)
+
+            raise McpError(ErrorData(code=INTERNAL_ERROR, message=msg)) from e
 
     def shutdown(self) -> None:
         if self.process is not None:
