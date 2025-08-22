@@ -15,7 +15,6 @@ from mcp.shared.exceptions import McpError
 from mcp.types import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
-    INVALID_REQUEST,
     ErrorData,
 )
 from pydantic import Field, ValidationError
@@ -285,7 +284,7 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 
 
 @asynccontextmanager
-async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext | None]:
+async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
     """Manage server startup and shutdown lifecycle."""
     # Initialize resources on startup with tracing
     # MCP requires Pro Engine
@@ -295,8 +294,7 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext | No
         try:
             yield context
         finally:
-            if context is not None:
-                context.shutdown()
+            context.shutdown()
 
 
 # Create a fast MCP server
@@ -674,15 +672,7 @@ async def semgrep_scan_rpc(
     # TODO: could this be slow if content is big?
     validate_code_files(code_files)
 
-    context: SemgrepContext | None = ctx.request_context.lifespan_context
-
-    if context is None:
-        error_string = """
-      Cannot run semgrep scan via RPC because there is no semgrep daemon running--most likely,
-      there is no Pro Engine installed. Try running `semgrep install-semgrep-pro` to install it.
-      """
-
-        raise McpError(ErrorData(code=INVALID_REQUEST, message=error_string))
+    context: SemgrepContext = ctx.request_context.lifespan_context
 
     temp_dir = None
     try:
