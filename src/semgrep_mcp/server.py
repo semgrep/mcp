@@ -693,15 +693,17 @@ async def semgrep_scan(
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
 
-    Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
-    CLI scan, or an RPC-based scan.
-
-    Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
-
     Use this tool when you need to:
       - scan code files for security vulnerabilities
       - scan code files for other issues
     """
+
+    # Implementer's note:
+    # Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
+    # CLI scan, or an RPC-based scan.
+    # Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
+    # I put this here, in a comment, so the MCP doesn't need to be aware
+    # of these differences.
 
     validate_code_files(code_files)
 
