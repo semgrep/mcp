@@ -26,7 +26,7 @@ Your contributions to this project are most welcome! Please see the ["good first
    in `~/.semgrep/settings.yml`.
 1. Build the server:
    ```bash
-   SEMGREP_API_TOKEN=<your token here> docker build -t semgrep-mcp . --secret id=semgrep_app_token,env=SEMGREP_API_TOKEN
+   make docker
    ```
 
 ## Run the MCP server
