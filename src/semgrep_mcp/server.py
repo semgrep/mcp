@@ -30,7 +30,7 @@ from semgrep_mcp.semgrep import (
     set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
-from semgrep_mcp.utilities.tracing import start_tracing, with_span
+from semgrep_mcp.utilities.tracing import start_tracing, with_tool_span
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -313,7 +313,8 @@ http_client = httpx.AsyncClient()
 
 
 @mcp.tool()
-async def semgrep_rule_schema() -> str:
+@with_tool_span()
+async def semgrep_rule_schema(ctx: Context) -> str:
     """
     Get the schema for a Semgrep rule
 
@@ -323,7 +324,6 @@ async def semgrep_rule_schema() -> str:
       - verify what fields are available for a Semgrep rule
       - verify the syntax for a Semgrep rule is correct
     """
-
     try:
         response = await http_client.get(f"{SEMGREP_API_URL}/schema_url")
         response.raise_for_status()
@@ -339,13 +339,13 @@ async def semgrep_rule_schema() -> str:
 
 
 @mcp.tool()
-async def get_supported_languages() -> list[str]:
+@with_tool_span()
+async def get_supported_languages(ctx: Context) -> list[str]:
     """
     Returns a list of supported languages by Semgrep
 
     Only use this tool if you are not sure what languages Semgrep supports.
     """
-
     args = ["show", "supported-languages", "--experimental"]
 
     # Parse output and return list of languages
@@ -423,7 +423,9 @@ async def get_deployment_slug() -> str:
 
 
 @mcp.tool()
+@with_tool_span()
 async def semgrep_findings(
+    ctx: Context,
     issue_type: list[str] = ["sast", "sca"],  # noqa: B006
     repos: list[str] = None,  # pyright: ignore  # noqa: RUF013
     status: str = "open",
@@ -479,7 +481,6 @@ async def semgrep_findings(
         contains details such as rule ID, description, severity, file location, and remediation
         guidance if available.
     """
-
     allowed_issue_types = {"sast", "sca"}
     if not set(issue_type).issubset(allowed_issue_types):
         invalid_types = ", ".join(set(issue_type) - allowed_issue_types)
@@ -560,7 +561,9 @@ async def semgrep_findings(
 
 
 @mcp.tool()
+@with_tool_span()
 async def semgrep_scan_with_custom_rule(
+    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     rule: str = RULE_FIELD,
 ) -> SemgrepScanResult:
@@ -608,7 +611,9 @@ async def semgrep_scan_with_custom_rule(
 
 
 @mcp.tool()
+@with_tool_span()
 async def semgrep_scan(
+    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
 ) -> SemgrepScanResult:
@@ -653,6 +658,7 @@ async def semgrep_scan(
 
 
 @mcp.tool()
+@with_tool_span()
 async def semgrep_scan_rpc(
     ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
@@ -667,18 +673,15 @@ async def semgrep_scan_rpc(
       - scan code files for other issues
       - scan quickly
     """
-
     # Validate code_files
     # TODO: could this be slow if content is big?
     validate_code_files(code_files)
 
-    context: SemgrepContext = ctx.request_context.lifespan_context
-
     temp_dir = None
     try:
         # TODO: perhaps should return more interpretable results?
-        with with_span(context.top_level_span, "semgrep_scan_rpc"):
-            cli_output = await run_semgrep_via_rpc(context, code_files)
+        context: SemgrepContext = ctx.request_context.lifespan_context
+        cli_output = await run_semgrep_via_rpc(context, code_files)
         return cli_output
     except McpError as e:
         raise e
@@ -698,7 +701,9 @@ async def semgrep_scan_rpc(
 
 
 @mcp.tool()
+@with_tool_span()
 async def semgrep_scan_local(
+    ctx: Context,
     code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
 ) -> list[SemgrepScanResult]:
@@ -753,7 +758,9 @@ async def semgrep_scan_local(
 
 
 @mcp.tool()
+@with_tool_span()
 async def security_check(
+    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
 ) -> str:
     """
@@ -816,7 +823,9 @@ Here are the details of the security issues found:
 
 
 @mcp.tool()
+@with_tool_span()
 async def get_abstract_syntax_tree(
+    ctx: Context,
     code: str = Field(description="The code to get the AST for"),
     language: str = Field(description="The programming language of the code"),
 ) -> str:
@@ -829,7 +838,6 @@ async def get_abstract_syntax_tree(
       - understand the structure of the code in a more granular way
       - see what a parser sees in the code
     """
-
     temp_dir = None
     temp_file_path = ""
     try:
