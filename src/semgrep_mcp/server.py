@@ -282,6 +282,9 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 # MCP Server
 # ---------------------------------------------------------------------------------
 
+# Set environment variable to track scans by MCP
+os.environ["SEMGREP_MCP"] = "true"
+
 
 @asynccontextmanager
 async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
@@ -625,9 +628,6 @@ async def semgrep_scan(
     # Validate code_files
     validate_code_files(code_files)
 
-    # Set environment variable to track weekly scans by legacy MCP
-    os.environ["SEMGREP_LEGACY_MCP"] = "true"
-
     temp_dir = None
     try:
         # Create temporary files from code content
@@ -674,9 +674,6 @@ async def semgrep_scan_rpc(
     # Validate code_files
     # TODO: could this be slow if content is big?
     validate_code_files(code_files)
-
-    # Unset the legacy MCP environment variable to avoid confusion
-    os.environ["SEMGREP_LEGACY_MCP"] = ""
 
     context: SemgrepContext = ctx.request_context.lifespan_context
 
