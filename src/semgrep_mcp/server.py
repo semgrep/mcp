@@ -665,7 +665,7 @@ async def semgrep_scan(
 @with_tool_span()
 async def semgrep_scan_rpc(
     ctx: Context,
-    code_files: list[CodeFile] = CODE_FILES_FIELD,  # pyright: ignore
+    code_files: list[CodeFile] = CODE_FILES_FIELD,
 ) -> CliOutput:
     """
     Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
