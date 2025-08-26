@@ -47,7 +47,8 @@ def get_deployment_id_from_token(token: str) -> str:
         headers={"Authorization": f"Bearer {token}"},
     )
     if resp.status_code == 200:
-        return (resp.json().get("deployment") or {}).get("id")
+        deployment = resp.json().get("deployment")
+        return deployment.get("id") if deployment else ""
     else:
         return ""
 
