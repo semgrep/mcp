@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 
+import functools
 import logging
 import os
-from collections.abc import Generator, Mapping
+from collections.abc import Callable, Generator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 import httpx
+from mcp.server.fastmcp import Context
 from opentelemetry import trace
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.resources import DEPLOYMENT_ENVIRONMENT, SERVICE_NAME, Resource
@@ -14,7 +17,7 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from ruamel.yaml import YAML
 
-from semgrep_mcp.semgrep import is_hosted
+from semgrep_mcp.semgrep import SemgrepContext, is_hosted
 
 # coupling: these need to be kept in sync with semgrep-proprietary/tracing.py
 DEFAULT_TRACE_ENDPOINT = "https://telemetry.semgrep.dev/v1/traces"
@@ -148,3 +151,27 @@ def with_span(
     context = trace.set_span_in_context(parent_span)
     with tracer.start_span(name, context=context) as span:
         yield span
+
+
+def with_tool_span(
+    span_name: str | None = None,
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """
+    Decorator to wrap MCP tools with a tracing span.
+
+    Args:
+        span_name: Optional name for the span. If not provided, uses the function name.
+    """
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(func)
+        async def wrapper(ctx: Context, *args: Any, **kwargs: Any) -> Any:
+            context: SemgrepContext = ctx.request_context.lifespan_context
+            name = span_name or func.__name__
+
+            with with_span(context.top_level_span, name):
+                return await func(ctx, *args, **kwargs)
+
+        return wrapper
+
+    return decorator
