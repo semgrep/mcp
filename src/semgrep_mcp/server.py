@@ -533,18 +533,14 @@ async def semgrep_findings(
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS,
-                    message="""
-                    Invalid API token: check your SEMGREP_APP_TOKEN environment variable.
-                    """,
+                    message="Invalid API token: check your SEMGREP_APP_TOKEN environment variable.",
                 )
             ) from e
         elif e.response.status_code == 404:
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS,
-                    message=f"""
-                    Deployment '{deployment}' not found or you don't have access to it.
-                    """,
+                    message=f"Deployment '{deployment}' not found or you don't have access to it.",
                 )
             ) from e
         else:
