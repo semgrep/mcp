@@ -172,8 +172,8 @@ def with_tool_span(
         func: Callable[P, Awaitable[R]],
     ) -> Callable[Concatenate[Context, P], Awaitable[R]]:
         @functools.wraps(func)
-        async def wrapper(ctx: Context, *args: P.args, **kwargs: P.kwargs) -> R:
-            context: SemgrepContext = ctx.request_context.lifespan_context
+        async def wrapper(ctx_for_tracing: Context, *args: P.args, **kwargs: P.kwargs) -> R:
+            context: SemgrepContext = ctx_for_tracing.request_context.lifespan_context
             name = span_name or func.__name__
 
             with with_span(context.top_level_span, name):
@@ -185,15 +185,10 @@ def with_tool_span(
         # the parameters of the tools.
         original_sig = inspect.signature(func)
         ctx_param = inspect.Parameter(
-            "ctx", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Context
+            "ctx_for_tracing", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Context
         )
         original_params = original_sig.parameters
-        # Only add the ctx parameter if it's not already in the signature
-        new_params = (
-            [ctx_param, *list(original_params.values())]
-            if "ctx" not in original_params
-            else list(original_params.values())
-        )
+        new_params = [ctx_param, *list(original_params.values())]
         new_sig = original_sig.replace(parameters=new_params)
         wrapper.__signature__ = new_sig  # pyright: ignore
 
