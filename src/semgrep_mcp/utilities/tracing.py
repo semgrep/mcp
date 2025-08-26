@@ -3,10 +3,10 @@
 import functools
 import logging
 import os
-from collections.abc import Callable, Generator, Mapping
+from collections.abc import Awaitable, Callable, Generator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Concatenate, ParamSpec, TypeVar
 
 import httpx
 from mcp.server.fastmcp import Context
@@ -153,9 +153,13 @@ def with_span(
         yield span
 
 
+R = TypeVar("R")
+P = ParamSpec("P")
+
+
 def with_tool_span(
     span_name: str | None = None,
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[Concatenate[Context, P], Awaitable[R]]]:
     """
     Decorator to wrap MCP tools with a tracing span.
 
@@ -163,14 +167,16 @@ def with_tool_span(
         span_name: Optional name for the span. If not provided, uses the function name.
     """
 
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(
+        func: Callable[P, Awaitable[R]],
+    ) -> Callable[Concatenate[Context, P], Awaitable[R]]:
         @functools.wraps(func)
-        async def wrapper(ctx: Context, *args: Any, **kwargs: Any) -> Any:
+        async def wrapper(ctx: Context, *args: P.args, **kwargs: P.kwargs) -> R:
             context: SemgrepContext = ctx.request_context.lifespan_context
             name = span_name or func.__name__
 
             with with_span(context.top_level_span, name):
-                return await func(ctx, *args, **kwargs)
+                return await func(*args, **kwargs)
 
         return wrapper
 
