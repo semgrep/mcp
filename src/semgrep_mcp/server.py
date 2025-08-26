@@ -704,7 +704,7 @@ async def semgrep_scan_rpc(
 @with_tool_span()
 async def semgrep_scan_local(
     ctx: Context,
-    code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,  # pyright: ignore
+    code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
 ) -> list[SemgrepScanResult]:
     """
@@ -761,7 +761,7 @@ async def semgrep_scan_local(
 @with_tool_span()
 async def security_check(
     ctx: Context,
-    code_files: list[CodeFile] = CODE_FILES_FIELD,  # pyright: ignore
+    code_files: list[CodeFile] = CODE_FILES_FIELD,
 ) -> str:
     """
     Runs a fast security check on code and returns any issues found.
