@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import functools
+import inspect
 import logging
 import os
 from collections.abc import Awaitable, Callable, Generator, Mapping
@@ -177,6 +178,24 @@ def with_tool_span(
 
             with with_span(context.top_level_span, name):
                 return await func(*args, **kwargs)
+
+        # This is a workaround to add the ctx parameter to the signature.
+        # So when you call inspect.signature(func).parameters.items()
+        # you will see the ctx parameter. And that is how FastMCP finds
+        # the parameters of the tools.
+        original_sig = inspect.signature(func)
+        ctx_param = inspect.Parameter(
+            "ctx", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Context
+        )
+        original_params = original_sig.parameters
+        # Only add the ctx parameter if it's not already in the signature
+        new_params = (
+            [ctx_param, *list(original_params.values())]
+            if "ctx" not in original_params
+            else list(original_params.values())
+        )
+        new_sig = original_sig.replace(parameters=new_params)
+        wrapper.__signature__ = new_sig  # pyright: ignore
 
         return wrapper
 
