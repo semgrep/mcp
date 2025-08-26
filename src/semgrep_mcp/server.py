@@ -313,7 +313,7 @@ http_client = httpx.AsyncClient()
 
 
 @mcp.tool()
-async def semgrep_rule_schema() -> str:
+async def semgrep_rule_schema(ctx: Context) -> str:
     """
     Get the schema for a Semgrep rule
 
@@ -323,34 +323,38 @@ async def semgrep_rule_schema() -> str:
       - verify what fields are available for a Semgrep rule
       - verify the syntax for a Semgrep rule is correct
     """
-
-    try:
-        response = await http_client.get(f"{SEMGREP_API_URL}/schema_url")
-        response.raise_for_status()
-        data: dict[str, str] = response.json()
-        schema_url: str = data["schema_url"]
-        response = await http_client.get(schema_url)
-        response.raise_for_status()
-        return str(response.text)
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error getting schema for Semgrep rule: {e!s}")
-        ) from e
+    context: SemgrepContext = ctx.request_context.lifespan_context
+    with with_span(context.top_level_span, "semgrep_rule_schema"):
+        try:
+            response = await http_client.get(f"{SEMGREP_API_URL}/schema_url")
+            response.raise_for_status()
+            data: dict[str, str] = response.json()
+            schema_url: str = data["schema_url"]
+            response = await http_client.get(schema_url)
+            response.raise_for_status()
+            return str(response.text)
+        except Exception as e:
+            raise McpError(
+                ErrorData(
+                    code=INTERNAL_ERROR, message=f"Error getting schema for Semgrep rule: {e!s}"
+                )
+            ) from e
 
 
 @mcp.tool()
-async def get_supported_languages() -> list[str]:
+async def get_supported_languages(ctx: Context) -> list[str]:
     """
     Returns a list of supported languages by Semgrep
 
     Only use this tool if you are not sure what languages Semgrep supports.
     """
+    context: SemgrepContext = ctx.request_context.lifespan_context
+    with with_span(context.top_level_span, "get_supported_languages"):
+        args = ["show", "supported-languages", "--experimental"]
 
-    args = ["show", "supported-languages", "--experimental"]
-
-    # Parse output and return list of languages
-    languages = await run_semgrep_output(top_level_span=None, args=args)
-    return [lang.strip() for lang in languages.strip().split("\n") if lang.strip()]
+        # Parse output and return list of languages
+        languages = await run_semgrep_output(top_level_span=None, args=args)
+        return [lang.strip() for lang in languages.strip().split("\n") if lang.strip()]
 
 
 async def get_deployment_slug() -> str:
@@ -424,6 +428,7 @@ async def get_deployment_slug() -> str:
 
 @mcp.tool()
 async def semgrep_findings(
+    ctx: Context,
     issue_type: list[str] = ["sast", "sca"],  # noqa: B006
     repos: list[str] = None,  # pyright: ignore  # noqa: RUF013
     status: str = "open",
@@ -479,88 +484,96 @@ async def semgrep_findings(
         contains details such as rule ID, description, severity, file location, and remediation
         guidance if available.
     """
-
-    allowed_issue_types = {"sast", "sca"}
-    if not set(issue_type).issubset(allowed_issue_types):
-        invalid_types = ", ".join(set(issue_type) - allowed_issue_types)
-        raise McpError(
-            ErrorData(
-                code=INVALID_PARAMS,
-                message=f"Invalid issue_type(s): {invalid_types}. "
-                "Allowed values are 'sast' and 'sca'.",
-            )
-        )
-
-    if not (100 <= page_size <= 3000):
-        raise McpError(
-            ErrorData(code=INVALID_PARAMS, message="page_size must be between 100 and 3000.")
-        )
-
-    deployment = await get_deployment_slug()
-    api_token = os.environ.get("SEMGREP_APP_TOKEN")
-    if not api_token:
-        raise McpError(
-            ErrorData(
-                code=INVALID_PARAMS,
-                message="SEMGREP_APP_TOKEN environment variable must be set to use this tool. "
-                "Create a token at semgrep.dev to continue.",
-            )
-        )
-
-    url = f"https://semgrep.dev/api/v1/deployments/{deployment}/findings"
-    headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
-
-    params_to_filter: dict[str, Any] = {
-        "issue_type": issue_type,
-        "status": status,
-        "repos": ",".join(repos) if repos else None,
-        "severities": severities,
-        "confidence": confidence,
-        "autotriage_verdict": autotriage_verdict,
-        "page": page,
-        "page_size": page_size,
-    }
-    params = {k: v for k, v in params_to_filter.items() if v is not None}
-
-    try:
-        response = await http_client.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-        return [Finding.model_validate(finding) for finding in data.get("findings", [])]
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 401:
+    context: SemgrepContext = ctx.request_context.lifespan_context
+    with with_span(context.top_level_span, "semgrep_findings"):
+        allowed_issue_types = {"sast", "sca"}
+        if not set(issue_type).issubset(allowed_issue_types):
+            invalid_types = ", ".join(set(issue_type) - allowed_issue_types)
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS,
-                    message="Invalid API token: check your SEMGREP_APP_TOKEN environment variable.",
+                    message=f"Invalid issue_type(s): {invalid_types}. "
+                    "Allowed values are 'sast' and 'sca'.",
                 )
-            ) from e
-        elif e.response.status_code == 404:
+            )
+
+        if not (100 <= page_size <= 3000):
+            raise McpError(
+                ErrorData(code=INVALID_PARAMS, message="page_size must be between 100 and 3000.")
+            )
+
+        deployment = await get_deployment_slug()
+        api_token = os.environ.get("SEMGREP_APP_TOKEN")
+        if not api_token:
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS,
-                    message=f"Deployment '{deployment}' not found or you don't have access to it.",
+                    message="SEMGREP_APP_TOKEN environment variable must be set to use this tool. "
+                    "Create a token at semgrep.dev to continue.",
                 )
+            )
+
+        url = f"https://semgrep.dev/api/v1/deployments/{deployment}/findings"
+        headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
+
+        params_to_filter: dict[str, Any] = {
+            "issue_type": issue_type,
+            "status": status,
+            "repos": ",".join(repos) if repos else None,
+            "severities": severities,
+            "confidence": confidence,
+            "autotriage_verdict": autotriage_verdict,
+            "page": page,
+            "page_size": page_size,
+        }
+        params = {k: v for k, v in params_to_filter.items() if v is not None}
+
+        try:
+            response = await http_client.get(url, headers=headers, params=params)
+            response.raise_for_status()
+            data = response.json()
+            return [Finding.model_validate(finding) for finding in data.get("findings", [])]
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 401:
+                raise McpError(
+                    ErrorData(
+                        code=INVALID_PARAMS,
+                        message="""
+                        Invalid API token: check your SEMGREP_APP_TOKEN environment variable.
+                        """,
+                    )
+                ) from e
+            elif e.response.status_code == 404:
+                raise McpError(
+                    ErrorData(
+                        code=INVALID_PARAMS,
+                        message=f"""
+                        Deployment '{deployment}' not found or you don't have access to it.
+                        """,
+                    )
+                ) from e
+            else:
+                raise McpError(
+                    ErrorData(
+                        code=INTERNAL_ERROR,
+                        message=f"Error fetching findings: {e.response.text}",
+                    )
+                ) from e
+        except ValidationError as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
             ) from e
-        else:
+        except Exception as e:
             raise McpError(
                 ErrorData(
-                    code=INTERNAL_ERROR,
-                    message=f"Error fetching findings: {e.response.text}",
+                    code=INTERNAL_ERROR, message=f"Error fetching findings from Semgrep: {e!s}"
                 )
             ) from e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error fetching findings from Semgrep: {e!s}")
-        ) from e
 
 
 @mcp.tool()
 async def semgrep_scan_with_custom_rule(
+    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     rule: str = RULE_FIELD,
 ) -> SemgrepScanResult:
@@ -572,43 +585,46 @@ async def semgrep_scan_with_custom_rule(
       - scan code files for specific security vulnerability not covered by the default Semgrep rules
       - scan code files for specific issue not covered by the default Semgrep rules
     """
-    # Validate code_files
-    validate_code_files(code_files)
-    temp_dir = None
-    try:
-        # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(code_files)
-        # Write rule to file
-        rule_file_path = os.path.join(temp_dir, "rule.yaml")
-        with open(rule_file_path, "w") as f:
-            f.write(rule)
+    context: SemgrepContext = ctx.request_context.lifespan_context
+    with with_span(context.top_level_span, "semgrep_scan_with_custom_rule"):
+        # Validate code_files
+        validate_code_files(code_files)
+        temp_dir = None
+        try:
+            # Create temporary files from code content
+            temp_dir = create_temp_files_from_code_content(code_files)
+            # Write rule to file
+            rule_file_path = os.path.join(temp_dir, "rule.yaml")
+            with open(rule_file_path, "w") as f:
+                f.write(rule)
 
-        # Run semgrep scan with custom rule
-        args = get_semgrep_scan_args(temp_dir, rule_file_path)
-        output = await run_semgrep_output(top_level_span=None, args=args)
-        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
-        remove_temp_dir_from_results(results, temp_dir)
-        return results
+            # Run semgrep scan with custom rule
+            args = get_semgrep_scan_args(temp_dir, rule_file_path)
+            output = await run_semgrep_output(top_level_span=None, args=args)
+            results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+            remove_temp_dir_from_results(results, temp_dir)
+            return results
 
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
+        except McpError as e:
+            raise e
+        except ValidationError as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+            ) from e
+        except Exception as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+            ) from e
 
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        finally:
+            if temp_dir:
+                # Clean up temporary files
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @mcp.tool()
 async def semgrep_scan(
+    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
 ) -> SemgrepScanResult:
@@ -619,37 +635,39 @@ async def semgrep_scan(
       - scan code files for security vulnerabilities
       - scan code files for other issues
     """
-    # Validate config
-    config = validate_config(config)
+    context: SemgrepContext = ctx.request_context.lifespan_context
+    with with_span(context.top_level_span, "semgrep_scan"):
+        # Validate config
+        config = validate_config(config)
 
-    # Validate code_files
-    validate_code_files(code_files)
+        # Validate code_files
+        validate_code_files(code_files)
 
-    temp_dir = None
-    try:
-        # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(code_files)
-        args = get_semgrep_scan_args(temp_dir, config)
-        output = await run_semgrep_output(top_level_span=None, args=args)
-        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
-        remove_temp_dir_from_results(results, temp_dir)
-        return results
+        temp_dir = None
+        try:
+            # Create temporary files from code content
+            temp_dir = create_temp_files_from_code_content(code_files)
+            args = get_semgrep_scan_args(temp_dir, config)
+            output = await run_semgrep_output(top_level_span=None, args=args)
+            results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+            remove_temp_dir_from_results(results, temp_dir)
+            return results
 
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
+        except McpError as e:
+            raise e
+        except ValidationError as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+            ) from e
+        except Exception as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+            ) from e
 
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        finally:
+            if temp_dir:
+                # Clean up temporary files
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @mcp.tool()
@@ -667,38 +685,37 @@ async def semgrep_scan_rpc(
       - scan code files for other issues
       - scan quickly
     """
-
-    # Validate code_files
-    # TODO: could this be slow if content is big?
-    validate_code_files(code_files)
-
     context: SemgrepContext = ctx.request_context.lifespan_context
+    with with_span(context.top_level_span, "semgrep_scan_rpc"):
+        # Validate code_files
+        # TODO: could this be slow if content is big?
+        validate_code_files(code_files)
 
-    temp_dir = None
-    try:
-        # TODO: perhaps should return more interpretable results?
-        with with_span(context.top_level_span, "semgrep_scan_rpc"):
+        temp_dir = None
+        try:
+            # TODO: perhaps should return more interpretable results?
             cli_output = await run_semgrep_via_rpc(context, code_files)
-        return cli_output
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
+            return cli_output
+        except McpError as e:
+            raise e
+        except ValidationError as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+            ) from e
+        except Exception as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+            ) from e
 
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        finally:
+            if temp_dir:
+                # Clean up temporary files
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @mcp.tool()
 async def semgrep_scan_local(
+    ctx: Context,
     code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
 ) -> list[SemgrepScanResult]:
@@ -711,49 +728,52 @@ async def semgrep_scan_local(
       - scan code files for security vulnerabilities
       - scan code files for other issues
     """
-    import os
+    context: SemgrepContext = ctx.request_context.lifespan_context
+    with with_span(context.top_level_span, "semgrep_scan_local"):
+        import os
 
-    if not os.environ.get("SEMGREP_ALLOW_LOCAL_SCAN"):
-        raise McpError(
-            ErrorData(
-                code=INVALID_PARAMS,
-                message=(
-                    "Local Semgrep scans are not allowed unless SEMGREP_ALLOW_LOCAL_SCAN is set"
-                ),
+        if not os.environ.get("SEMGREP_ALLOW_LOCAL_SCAN"):
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS,
+                    message=(
+                        "Local Semgrep scans are not allowed unless SEMGREP_ALLOW_LOCAL_SCAN is set"
+                    ),
+                )
             )
-        )
-    # Validate config
-    config = validate_config(config)
+        # Validate config
+        config = validate_config(config)
 
-    temp_dir = None
-    try:
-        results = []
-        for cf in code_files:
-            args = get_semgrep_scan_args(cf.path, config)
-            output = await run_semgrep_output(top_level_span=None, args=args)
-            result: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
-            results.append(result)
-        return results
+        temp_dir = None
+        try:
+            results = []
+            for cf in code_files:
+                args = get_semgrep_scan_args(cf.path, config)
+                output = await run_semgrep_output(top_level_span=None, args=args)
+                result: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+                results.append(result)
+            return results
 
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
+        except McpError as e:
+            raise e
+        except ValidationError as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+            ) from e
+        except Exception as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+            ) from e
 
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        finally:
+            if temp_dir:
+                # Clean up temporary files
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @mcp.tool()
 async def security_check(
+    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
 ) -> str:
     """
@@ -769,54 +789,57 @@ async def security_check(
     explain to the user why it's important to fix.
     If there are no issues, you can be reasonably confident that the code is secure.
     """
-    # Validate code_files
-    validate_code_files(code_files)
+    context: SemgrepContext = ctx.request_context.lifespan_context
+    with with_span(context.top_level_span, "security_check"):
+        # Validate code_files
+        validate_code_files(code_files)
 
-    no_findings_message = """No security issues found in the code!"""
-    security_issues_found_message_template = """{num_issues} security issues found in the code.
+        no_findings_message = """No security issues found in the code!"""
+        security_issues_found_message_template = """{num_issues} security issues found in the code.
 
-Here are the details of the security issues found:
+    Here are the details of the security issues found:
 
-<security-issues>
-    {details}
-</security-issues>
-"""
-    temp_dir = None
-    try:
-        # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(code_files)
-        args = get_semgrep_scan_args(temp_dir)
-        output = await run_semgrep_output(top_level_span=None, args=args)
-        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
-        remove_temp_dir_from_results(results, temp_dir)
+    <security-issues>
+        {details}
+    </security-issues>
+    """
+        temp_dir = None
+        try:
+            # Create temporary files from code content
+            temp_dir = create_temp_files_from_code_content(code_files)
+            args = get_semgrep_scan_args(temp_dir)
+            output = await run_semgrep_output(top_level_span=None, args=args)
+            results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+            remove_temp_dir_from_results(results, temp_dir)
 
-        if len(results.results) > 0:
-            return security_issues_found_message_template.format(
-                num_issues=len(results.results),
-                details=results.model_dump_json(indent=2),
-            )
-        else:
-            return no_findings_message
+            if len(results.results) > 0:
+                return security_issues_found_message_template.format(
+                    num_issues=len(results.results),
+                    details=results.model_dump_json(indent=2),
+                )
+            else:
+                return no_findings_message
 
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
+        except McpError as e:
+            raise e
+        except ValidationError as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+            ) from e
+        except Exception as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+            ) from e
 
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        finally:
+            if temp_dir:
+                # Clean up temporary files
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 @mcp.tool()
 async def get_abstract_syntax_tree(
+    ctx: Context,
     code: str = Field(description="The code to get the AST for"),
     language: str = Field(description="The programming language of the code"),
 ) -> str:
@@ -829,49 +852,50 @@ async def get_abstract_syntax_tree(
       - understand the structure of the code in a more granular way
       - see what a parser sees in the code
     """
+    context: SemgrepContext = ctx.request_context.lifespan_context
+    with with_span(context.top_level_span, "get_abstract_syntax_tree"):
+        temp_dir = None
+        temp_file_path = ""
+        try:
+            # Create temporary directory and file for AST generation
+            temp_dir = tempfile.mkdtemp(prefix="semgrep_ast_")
+            temp_file_path = os.path.join(temp_dir, "code.txt")  # safe
 
-    temp_dir = None
-    temp_file_path = ""
-    try:
-        # Create temporary directory and file for AST generation
-        temp_dir = tempfile.mkdtemp(prefix="semgrep_ast_")
-        temp_file_path = os.path.join(temp_dir, "code.txt")  # safe
+            # Write content to file
+            with open(temp_file_path, "w") as f:
+                f.write(code)
 
-        # Write content to file
-        with open(temp_file_path, "w") as f:
-            f.write(code)
+            args = [
+                "--experimental",
+                "--dump-ast",
+                "-l",
+                language,
+                "--json",
+                temp_file_path,
+            ]
+            return await run_semgrep_output(top_level_span=None, args=args)
 
-        args = [
-            "--experimental",
-            "--dump-ast",
-            "-l",
-            language,
-            "--json",
-            temp_file_path,
-        ]
-        return await run_semgrep_output(top_level_span=None, args=args)
-
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except OSError as e:
-        raise McpError(
-            ErrorData(
-                code=INTERNAL_ERROR,
-                message=f"Failed to create or write to file {temp_file_path}: {e!s}",
-            )
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
+        except McpError as e:
+            raise e
+        except ValidationError as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+            ) from e
+        except OSError as e:
+            raise McpError(
+                ErrorData(
+                    code=INTERNAL_ERROR,
+                    message=f"Failed to create or write to file {temp_file_path}: {e!s}",
+                )
+            ) from e
+        except Exception as e:
+            raise McpError(
+                ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+            ) from e
+        finally:
+            if temp_dir:
+                # Clean up temporary files
+                shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 # ---------------------------------------------------------------------------------
