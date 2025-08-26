@@ -314,7 +314,7 @@ http_client = httpx.AsyncClient()
 
 @mcp.tool()
 @with_tool_span()
-async def semgrep_rule_schema() -> str:
+async def semgrep_rule_schema(ctx: Context) -> str:
     """
     Get the schema for a Semgrep rule
 
@@ -340,7 +340,7 @@ async def semgrep_rule_schema() -> str:
 
 @mcp.tool()
 @with_tool_span()
-async def get_supported_languages() -> list[str]:
+async def get_supported_languages(ctx: Context) -> list[str]:
     """
     Returns a list of supported languages by Semgrep
 
@@ -425,6 +425,7 @@ async def get_deployment_slug() -> str:
 @mcp.tool()
 @with_tool_span()
 async def semgrep_findings(
+    ctx: Context,
     issue_type: list[str] = ["sast", "sca"],  # noqa: B006
     repos: list[str] = None,  # pyright: ignore  # noqa: RUF013
     status: str = "open",
@@ -566,6 +567,7 @@ async def semgrep_findings(
 @mcp.tool()
 @with_tool_span()
 async def semgrep_scan_with_custom_rule(
+    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     rule: str = RULE_FIELD,
 ) -> SemgrepScanResult:
@@ -615,6 +617,7 @@ async def semgrep_scan_with_custom_rule(
 @mcp.tool()
 @with_tool_span()
 async def semgrep_scan(
+    ctx: Context,
     code_files: list[CodeFile] = CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
 ) -> SemgrepScanResult:
@@ -662,7 +665,7 @@ async def semgrep_scan(
 @with_tool_span()
 async def semgrep_scan_rpc(
     ctx: Context,
-    code_files: list[CodeFile] = CODE_FILES_FIELD,
+    code_files: list[CodeFile] = CODE_FILES_FIELD,  # pyright: ignore
 ) -> CliOutput:
     """
     Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
@@ -704,7 +707,8 @@ async def semgrep_scan_rpc(
 @mcp.tool()
 @with_tool_span()
 async def semgrep_scan_local(
-    code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,
+    ctx: Context,
+    code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,  # pyright: ignore
     config: str | None = CONFIG_FIELD,
 ) -> list[SemgrepScanResult]:
     """
@@ -760,7 +764,8 @@ async def semgrep_scan_local(
 @mcp.tool()
 @with_tool_span()
 async def security_check(
-    code_files: list[CodeFile] = CODE_FILES_FIELD,
+    ctx: Context,
+    code_files: list[CodeFile] = CODE_FILES_FIELD,  # pyright: ignore
 ) -> str:
     """
     Runs a fast security check on code and returns any issues found.
@@ -824,6 +829,7 @@ Here are the details of the security issues found:
 @mcp.tool()
 @with_tool_span()
 async def get_abstract_syntax_tree(
+    ctx: Context,
     code: str = Field(description="The code to get the AST for"),
     language: str = Field(description="The programming language of the code"),
 ) -> str:

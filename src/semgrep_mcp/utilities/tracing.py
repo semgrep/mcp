@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import functools
-import inspect
 import logging
 import os
 from collections.abc import Awaitable, Callable, Generator, Mapping
@@ -160,37 +159,29 @@ P = ParamSpec("P")
 
 def with_tool_span(
     span_name: str | None = None,
-) -> Callable[[Callable[P, Awaitable[R]]], Callable[Concatenate[Context, P], Awaitable[R]]]:
+) -> Callable[
+    [Callable[Concatenate[Context, P], Awaitable[R]]],
+    Callable[Concatenate[Context, P], Awaitable[R]],
+]:
     """
     Decorator to wrap MCP tools with a tracing span.
+
+    All tools decorated by @with_tool_span must have a Context parameter.
 
     Args:
         span_name: Optional name for the span. If not provided, uses the function name.
     """
 
     def decorator(
-        func: Callable[P, Awaitable[R]],
+        func: Callable[Concatenate[Context, P], Awaitable[R]],
     ) -> Callable[Concatenate[Context, P], Awaitable[R]]:
         @functools.wraps(func)
-        async def wrapper(tracing_ctx: Context, *args: P.args, **kwargs: P.kwargs) -> R:
-            context: SemgrepContext = tracing_ctx.request_context.lifespan_context
+        async def wrapper(ctx: Context, *args: P.args, **kwargs: P.kwargs) -> R:
+            context: SemgrepContext = ctx.request_context.lifespan_context
             name = span_name or func.__name__
 
             with with_span(context.top_level_span, name):
-                return await func(*args, **kwargs)
-
-        # This is a workaround to add the ctx parameter to the signature.
-        # So when you call inspect.signature(func).parameters.items()
-        # you will see the ctx parameter. And that is how FastMCP finds
-        # the parameters of the tools.
-        original_sig = inspect.signature(func)
-        ctx_param = inspect.Parameter(
-            "tracing_ctx", inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=Context
-        )
-        original_params = original_sig.parameters
-        new_params = [ctx_param, *list(original_params.values())]
-        new_sig = original_sig.replace(parameters=new_params)
-        wrapper.__signature__ = new_sig  # pyright: ignore
+                return await func(ctx, *args, **kwargs)
 
         return wrapper
 
