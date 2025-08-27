@@ -360,6 +360,7 @@ async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> 
 
     return CliOutput.from_json(resp_json)
 
+
 async def semgrep_scan_sca(
     context: SemgrepContext,
     temp_dir: str,
@@ -371,7 +372,7 @@ async def semgrep_scan_sca(
     # `semgrep ci` must be run from a git repo
     subprocess.run(["git", "init"])
     # note that --dry-run is different than --dryrun!!!!
-    args = ["scan", "\"supply-chain\"", "--json", "--dry-run"]
+    args = ["scan", '"supply-chain"', "--json", "--dry-run"]
     output = await run_semgrep_output(context.top_level_span, args)
     print("output is", output)
     os.chdir(cwd)

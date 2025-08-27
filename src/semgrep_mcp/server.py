@@ -733,6 +733,7 @@ async def semgrep_scan(
         logging.info(f"Running CLI-based scan on paths: {paths}")
         return await semgrep_scan_cli(code_files, config)
 
+
 @mcp.tool()
 async def semgrep_scan_supply_chain(
     ctx: Context,
@@ -772,7 +773,9 @@ async def semgrep_scan_supply_chain(
                 )
             )
         else:
-            logging.info(f"Running Supply Chain scan on paths: {paths} and lockfiles: {lockfiles_paths}")
+            logging.info(
+                f"Running Supply Chain scan on paths: {paths} and lockfiles: {lockfiles_paths}"
+            )
             with with_span(context.top_level_span, "semgrep_scan_sca"):
                 # remove_temp_dir_from_results(results, temp_dir)
                 return await semgrep_scan_sca(context, temp_dir)
@@ -784,15 +787,15 @@ async def semgrep_scan_supply_chain(
         ) from e
     except Exception as e:
         raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan (supply chain): {e!s}")
+            ErrorData(
+                code=INTERNAL_ERROR, message=f"Error running semgrep scan (supply chain): {e!s}"
+            )
         ) from e
 
     finally:
         if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
-
-
 
 
 @mcp.tool()
