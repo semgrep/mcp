@@ -359,3 +359,23 @@ async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> 
     assert isinstance(resp_json, dict)
 
     return CliOutput.from_json(resp_json)
+
+async def semgrep_scan_sca(
+    context: SemgrepContext,
+    temp_dir: str,
+) -> CliOutput:
+    cwd = os.getcwd()
+
+    # Do this in the temp dir so we only scan stuff in the directory
+    os.chdir(temp_dir)
+    # `semgrep ci` must be run from a git repo
+    subprocess.run(["git", "init"])
+    # note that --dry-run is different than --dryrun!!!!
+    args = ["scan", "\"supply-chain\"", "--json", "--dry-run"]
+    output = await run_semgrep_output(context.top_level_span, args)
+    print("output is", output)
+    os.chdir(cwd)
+
+    resp_json = json.loads(output)
+
+    return CliOutput.from_json(resp_json)

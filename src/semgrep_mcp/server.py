@@ -27,6 +27,7 @@ from semgrep_mcp.semgrep import (
     mk_context,
     run_semgrep_output,
     run_semgrep_via_rpc,
+    semgrep_scan_sca,
     set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
@@ -47,6 +48,7 @@ CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and '
 LOCAL_CODE_FILES_FIELD = Field(
     description=("List of dictionaries with 'path' pointing to the absolute path of the code file")
 )
+LOCKFILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
 
 CONFIG_FIELD = Field(
     description="Optional Semgrep configuration string (e.g. 'p/docker', 'p/xss', 'auto')",
@@ -730,6 +732,67 @@ async def semgrep_scan(
     else:
         logging.info(f"Running CLI-based scan on paths: {paths}")
         return await semgrep_scan_cli(code_files, config)
+
+@mcp.tool()
+async def semgrep_scan_supply_chain(
+    ctx: Context,
+    lockfiles: list[CodeFile] = LOCKFILES_FIELD,
+    code_files: list[CodeFile] = CODE_FILES_FIELD,
+) -> CliOutput:
+    """
+    Runs a Semgrep scan on provided code content, in the context of a project's
+    lockfiles, and return potential third-party security vulnerabilities.
+
+    Use this tool when you:
+      - change the version of a dependency in a project
+      - add a new dependency to a project
+      - add code which uses a dependency in a project
+    """
+
+    validate_code_files(code_files)
+    validate_code_files(lockfiles)
+
+    context: SemgrepContext = ctx.request_context.lifespan_context
+
+    paths = [cf.filename for cf in code_files]
+    lockfiles_paths = [lf.filename for lf in lockfiles]
+
+    # Create temporary files from code content
+    temp_dir = create_temp_files_from_code_content([*lockfiles, *code_files])
+
+    print("temp_dir", temp_dir)
+    input()
+
+    try:
+        if context.process is None:
+            raise McpError(
+                ErrorData(
+                    code=INTERNAL_ERROR,
+                    message="Supply Chain scan requires an active Semgrep daemon to be running.",
+                )
+            )
+        else:
+            logging.info(f"Running Supply Chain scan on paths: {paths} and lockfiles: {lockfiles_paths}")
+            with with_span(context.top_level_span, "semgrep_scan_sca"):
+                # remove_temp_dir_from_results(results, temp_dir)
+                return await semgrep_scan_sca(context, temp_dir)
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan (supply chain): {e!s}")
+        ) from e
+
+    finally:
+        if temp_dir:
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
 
 
 @mcp.tool()
