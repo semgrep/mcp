@@ -26,6 +26,8 @@ _SEMGREP_LOCK = asyncio.Lock()
 # Global variable to store the semgrep executable path
 SEMGREP_EXECUTABLE: str | None = None
 
+SEMGREP_PATH = os.getenv("SEMGREP_PATH", None)
+
 ################################################################################
 # Helpers #
 ################################################################################
@@ -59,6 +61,9 @@ def find_semgrep_path() -> str | None:
         "/home/linuxbrew/.linuxbrew/bin/semgrep",  # Homebrew on Linux
         "/snap/bin/semgrep",  # Snap on Linux
     ]
+
+    if SEMGREP_PATH:
+        common_paths.append(SEMGREP_PATH)
 
     # Add Windows paths if on Windows
     if os.name == "nt":
