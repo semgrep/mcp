@@ -31,6 +31,7 @@ from semgrep_mcp.semgrep import (
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.tracing import start_tracing, with_tool_span
+from semgrep_mcp.utilities.utils import get_semgrep_app_token
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -370,12 +371,15 @@ async def get_deployment_slug() -> str:
         return DEPLOYMENT_SLUG
 
     # Get API token
-    api_token = os.environ.get("SEMGREP_APP_TOKEN")
+    api_token = get_semgrep_app_token()
     if not api_token:
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
-                message="SEMGREP_APP_TOKEN environment variable must be set to use this tool",
+                message="""
+                  SEMGREP_APP_TOKEN environment variable must be set or user
+                  must be logged in to use this tool
+                """,
             )
         )
 
@@ -498,7 +502,7 @@ async def semgrep_findings(
         )
 
     deployment = await get_deployment_slug()
-    api_token = os.environ.get("SEMGREP_APP_TOKEN")
+    api_token = get_semgrep_app_token()
     if not api_token:
         raise McpError(
             ErrorData(
