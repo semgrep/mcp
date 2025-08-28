@@ -350,8 +350,8 @@ async def mk_context(top_level_span: trace.Span) -> SemgrepContext:
         pro_engine_available=pro_engine_available,
         process=process,
         use_rpc=use_rpc,
+    )
 
-)
 
 async def run_semgrep_output(top_level_span: trace.Span | None, args: list[str]) -> str:
     """
@@ -359,7 +359,7 @@ async def run_semgrep_output(top_level_span: trace.Span | None, args: list[str])
     """
     process = await run_semgrep_process_sync(top_level_span, args)
 
-    if process.stdout or process.stderr is None:
+    if process.stdout is None or process.stderr is None:
         raise McpError(
             ErrorData(
                 code=INTERNAL_ERROR,
