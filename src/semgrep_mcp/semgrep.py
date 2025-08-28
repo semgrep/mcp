@@ -290,7 +290,7 @@ async def run_semgrep_process_async(
 async def run_semgrep_process_sync(
     top_level_span: trace.Span | None,
     args: list[str],
-) -> subprocess.CompletedProcess:
+) -> subprocess.CompletedProcess[bytes]:
     # Ensure semgrep is available
     semgrep_path = await ensure_semgrep_available()
 
@@ -300,10 +300,7 @@ async def run_semgrep_process_sync(
     process = subprocess.run(
         [semgrep_path, *args],
         stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        # This ensures that stderr makes it through to
-        # the server logs, for debugging purposes.
-        stderr=None,
+        capture_output=True,
         env=env,
     )
     return process
@@ -353,8 +350,8 @@ async def mk_context(top_level_span: trace.Span) -> SemgrepContext:
         pro_engine_available=pro_engine_available,
         process=process,
         use_rpc=use_rpc,
-    )
 
+)
 
 async def run_semgrep_output(top_level_span: trace.Span | None, args: list[str]) -> str:
     """
