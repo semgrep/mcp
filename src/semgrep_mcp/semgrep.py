@@ -162,18 +162,21 @@ class SemgrepContext:
 
     is_hosted: bool
     pro_engine_available: bool
+    use_rpc: bool
 
     def __init__(
         self,
         top_level_span: trace.Span,
         is_hosted: bool,
         pro_engine_available: bool,
+        use_rpc: bool,
         process: asyncio.subprocess.Process | None = None,
     ) -> None:
         self.process = process
         self.top_level_span = top_level_span
         self.is_hosted = is_hosted
         self.pro_engine_available = pro_engine_available
+        self.use_rpc = use_rpc
 
         if process is None:
             self.stdin = None
@@ -282,16 +285,22 @@ async def run_semgrep(
     return process
 
 
-async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext:
+async def mk_context(top_level_span: trace.Span) -> SemgrepContext:
     """
-    Runs the semgrep daemon (`semgrep mcp`) if the user has the Pro Engine installed
-    and is running the MCP server locally.
+    Runs the semgrep daemon (`semgrep mcp`) if:
+    - the user has the Pro Engine installed
+    - is running the MCP server locally
+    - the USE_SEMGREP_RPC env var is set to true
+
+    TODO: remove the "running locally" check once we have a way to
+    obtain per-user app tokens in the hosted environment
     """
     process = None
     pro_engine_available = True
 
-    resp = await run_semgrep(top_level_span, ["--pro", "--version"])
+    use_rpc = os.environ.get("USE_SEMGREP_RPC", "true").lower() == "true"
 
+    resp = await run_semgrep(top_level_span, ["--pro", "--version"])
     # wait for the command to exit so the exit code is set
     await resp.communicate()
 
@@ -303,6 +312,8 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext:
             "User doesn't have the Pro Engine installed, not running `semgrep mcp` daemon..."
         )
         pro_engine_available = False
+    elif not use_rpc:
+        logging.info("USE_SEMGREP_RPC env var is false, not running `semgrep mcp` daemon...")
     elif is_hosted():
         logging.warning(
             """
@@ -311,6 +322,7 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext:
             """
         )
     else:
+        logging.info("Spawning `semgrep mcp` daemon...")
         process = await run_semgrep(top_level_span, ["mcp", "--pro", "--trace"])
 
     return SemgrepContext(
@@ -318,6 +330,7 @@ async def run_semgrep_daemon(top_level_span: trace.Span) -> SemgrepContext:
         is_hosted=is_hosted(),
         pro_engine_available=pro_engine_available,
         process=process,
+        use_rpc=use_rpc,
     )
 
 
