@@ -216,7 +216,41 @@ def get_semgrep_scan_args(temp_dir: str, config: str | None = None) -> list[str]
     return args
 
 
-def validate_code_files(code_files: list[CodeFile]) -> None:
+def validate_local_files(local_files: list[dict[str, str]]) -> list[LocalCodeFile]:
+    """
+    Validates the local_files parameter for semgrep scan using Pydantic validation
+
+    Args:
+        local_files: List of LocalCodeFile objects
+
+    Raises:
+        McpError: If validation fails
+    """
+    if not local_files:
+        raise McpError(
+            ErrorData(
+                code=INVALID_PARAMS, message="local_files must be a non-empty list of file objects"
+            )
+        )
+    try:
+        # Pydantic will automatically validate each item in the list
+        validated_local_files = [LocalCodeFile.model_validate(file) for file in local_files]
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
+        ) from e
+    for file in validated_local_files:
+        if os.path.isabs(file.path):
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS, message="code_files.filename must be a relative path"
+                )
+            )
+
+    return validated_local_files
+
+
+def validate_code_files(code_files: list[dict[str, str]]) -> list[CodeFile]:
     """
     Validates the code_files parameter for semgrep scan using Pydantic validation
 
@@ -234,18 +268,20 @@ def validate_code_files(code_files: list[CodeFile]) -> None:
         )
     try:
         # Pydantic will automatically validate each item in the list
-        [CodeFile.model_validate(file) for file in code_files]
+        validated_code_files = [CodeFile.model_validate(file) for file in code_files]
     except Exception as e:
         raise McpError(
             ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
         ) from e
-    for file in code_files:
+    for file in validated_code_files:
         if os.path.isabs(file.filename):
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS, message="code_files.filename must be a relative path"
                 )
             )
+
+    return validated_code_files
 
 
 def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> None:
@@ -564,7 +600,7 @@ async def semgrep_findings(
 @with_tool_span()
 async def semgrep_scan_with_custom_rule(
     ctx: Context,
-    code_files: list[CodeFile] = CODE_FILES_FIELD,
+    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
     rule: str = RULE_FIELD,
 ) -> SemgrepScanResult:
     """
@@ -576,11 +612,11 @@ async def semgrep_scan_with_custom_rule(
       - scan code files for specific issue not covered by the default Semgrep rules
     """
     # Validate code_files
-    validate_code_files(code_files)
+    validated_code_files = validate_code_files(code_files)
     temp_dir = None
     try:
         # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(code_files)
+        temp_dir = create_temp_files_from_code_content(validated_code_files)
         # Write rule to file
         rule_file_path = os.path.join(temp_dir, "rule.yaml")
         with open(rule_file_path, "w") as f:
@@ -614,7 +650,7 @@ async def semgrep_scan_with_custom_rule(
 @with_tool_span()
 async def semgrep_scan(
     ctx: Context,
-    code_files: list[CodeFile] = CODE_FILES_FIELD,
+    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
 ) -> SemgrepScanResult | CliOutput:
     """
@@ -633,12 +669,12 @@ async def semgrep_scan(
     config = validate_config(config)
 
     # Validate code_files
-    validate_code_files(code_files)
+    validated_code_files = validate_code_files(code_files)
 
     temp_dir = None
     try:
         # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(code_files)
+        temp_dir = create_temp_files_from_code_content(validated_code_files)
         args = get_semgrep_scan_args(temp_dir, config)
         output = await run_semgrep_output(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
@@ -666,7 +702,7 @@ async def semgrep_scan(
 @with_tool_span()
 async def semgrep_scan_rpc(
     ctx: Context,
-    code_files: list[CodeFile] = CODE_FILES_FIELD,
+    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
 ) -> CliOutput:
     """
     Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
@@ -680,13 +716,13 @@ async def semgrep_scan_rpc(
     """
     # Validate code_files
     # TODO: could this be slow if content is big?
-    validate_code_files(code_files)
+    validated_code_files = validate_code_files(code_files)
 
     temp_dir = None
     try:
         # TODO: perhaps should return more interpretable results?
         context: SemgrepContext = ctx.request_context.lifespan_context
-        cli_output = await run_semgrep_via_rpc(context, code_files)
+        cli_output = await run_semgrep_via_rpc(context, validated_code_files)
         return cli_output
     except McpError as e:
         raise e
@@ -709,7 +745,7 @@ async def semgrep_scan_rpc(
 @with_tool_span()
 async def semgrep_scan_local(
     ctx: Context,
-    code_files: list[LocalCodeFile] = LOCAL_CODE_FILES_FIELD,
+    code_files: list[dict[str, str]] = LOCAL_CODE_FILES_FIELD,
     config: str | None = CONFIG_FIELD,
 ) -> list[SemgrepScanResult]:
     """
@@ -735,10 +771,12 @@ async def semgrep_scan_local(
     # Validate config
     config = validate_config(config)
 
+    validated_local_files = validate_local_files(code_files)
+
     temp_dir = None
     try:
         results = []
-        for cf in code_files:
+        for cf in validated_local_files:
             args = get_semgrep_scan_args(cf.path, config)
             output = await run_semgrep_output(top_level_span=None, args=args)
             result: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
@@ -766,7 +804,7 @@ async def semgrep_scan_local(
 @with_tool_span()
 async def security_check(
     ctx: Context,
-    code_files: list[CodeFile] = CODE_FILES_FIELD,
+    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
 ) -> str:
     """
     Runs a fast security check on code and returns any issues found.
@@ -782,7 +820,7 @@ async def security_check(
     If there are no issues, you can be reasonably confident that the code is secure.
     """
     # Validate code_files
-    validate_code_files(code_files)
+    validated_code_files = validate_code_files(code_files)
 
     no_findings_message = """No security issues found in the code!"""
     security_issues_found_message_template = """{num_issues} security issues found in the code.
@@ -796,7 +834,7 @@ Here are the details of the security issues found:
     temp_dir = None
     try:
         # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(code_files)
+        temp_dir = create_temp_files_from_code_content(validated_code_files)
         args = get_semgrep_scan_args(temp_dir)
         output = await run_semgrep_output(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
