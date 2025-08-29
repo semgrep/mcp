@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
+from opentelemetry import trace
 
 import click
 import httpx
@@ -761,7 +762,13 @@ async def semgrep_scan(
 
     paths = [cf.filename for cf in validated_code_files]
 
-    if context.process is not None:
+    use_rpc = context.process is not None
+
+    # Augment the span with whether or not it's an RPC-based scan
+    span = trace.get_current_span()
+    span.set_attribute("use_rpc", use_rpc)
+
+    if use_rpc:
         if config is not None:
             # This should hopefully just cause the agent to call us back with
             # the correct parameters.
