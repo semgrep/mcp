@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "semgrep-mcp"
-version = "0.5.1"
+version = "0.6.0"
 description = "MCP Server for using Semgrep to scan code"
 readme = "README.md"
 changelog = "CHANGELOG.md"
@@ -106,4 +106,14 @@ packages = [
 [tool.pyright]
 exclude = [
     "src/semgrep_mcp/semgrep_interfaces",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--tb=short",
 ]

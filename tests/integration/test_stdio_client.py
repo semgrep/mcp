@@ -8,7 +8,7 @@ from mcp.client.stdio import stdio_client
 server_params = StdioServerParameters(
     command="python",  # Executable
     args=["src/semgrep_mcp/server.py"],  # Optional command line arguments
-    env=None,  # Optional environment variables
+    env={"USE_SEMGREP_RPC": "false"},  # Optional environment variables
 )
 
 
