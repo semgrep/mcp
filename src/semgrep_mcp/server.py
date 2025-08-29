@@ -7,7 +7,6 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
-from opentelemetry import trace
 
 import click
 import httpx
@@ -654,7 +653,9 @@ async def semgrep_scan_with_custom_rule(
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+@with_tool_span()
 async def semgrep_scan_cli(
+    ctx: Context,
     code_files: list[CodeFile],
     config: str | None = CONFIG_FIELD,
 ) -> SemgrepScanResult | CliOutput:
@@ -700,6 +701,7 @@ async def semgrep_scan_cli(
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
+@with_tool_span()
 async def semgrep_scan_rpc(
     ctx: Context,
     code_files: list[CodeFile],
@@ -762,13 +764,7 @@ async def semgrep_scan(
 
     paths = [cf.filename for cf in validated_code_files]
 
-    use_rpc = context.process is not None
-
-    # Augment the span with whether or not it's an RPC-based scan
-    span = trace.get_current_span()
-    span.set_attribute("use_rpc", use_rpc)
-
-    if use_rpc:
+    if context.process is not None:
         if config is not None:
             # This should hopefully just cause the agent to call us back with
             # the correct parameters.
@@ -786,7 +782,7 @@ async def semgrep_scan(
         return await semgrep_scan_rpc(ctx, validated_code_files)
     else:
         logging.info(f"Running CLI-based scan on paths: {paths}")
-        return await semgrep_scan_cli(validated_code_files, config)
+        return await semgrep_scan_cli(ctx, validated_code_files, config)
 
 
 @mcp.tool()
