@@ -249,16 +249,7 @@ class SemgrepContext:
 ################################################################################
 
 
-async def run_semgrep(
-    top_level_span: trace.Span | None, args: list[str]
-) -> asyncio.subprocess.Process:
-    """
-    Runs semgrep with the given arguments as a subprocess, without waiting for it to finish.
-    """
-
-    # Ensure semgrep is available
-    semgrep_path = await ensure_semgrep_available()
-
+def get_semgrep_env(top_level_span: trace.Span | None) -> dict[str, str]:
     # Just so we get the debug logs for the MCP server
     env = os.environ.copy()
     env["SEMGREP_LOG_SRCS"] = "mcp"
@@ -269,6 +260,18 @@ async def run_semgrep(
         env["SEMGREP_TRACE_PARENT_TRACE_ID"] = trace.format_trace_id(
             top_level_span.get_span_context().trace_id
         )
+
+    return env
+
+
+async def run_semgrep_process_async(
+    top_level_span: trace.Span | None,
+    args: list[str],
+) -> asyncio.subprocess.Process:
+    # Ensure semgrep is available
+    semgrep_path = await ensure_semgrep_available()
+
+    env = get_semgrep_env(top_level_span)
 
     # Execute semgrep command
     process = await asyncio.create_subprocess_exec(
@@ -281,7 +284,25 @@ async def run_semgrep(
         stderr=None,
         env=env,
     )
+    return process
 
+
+async def run_semgrep_process_sync(
+    top_level_span: trace.Span | None,
+    args: list[str],
+) -> subprocess.CompletedProcess[bytes]:
+    # Ensure semgrep is available
+    semgrep_path = await ensure_semgrep_available()
+
+    env = get_semgrep_env(top_level_span)
+
+    # Execute semgrep command
+    process = subprocess.run(
+        [semgrep_path, *args],
+        stdin=subprocess.PIPE,
+        capture_output=True,
+        env=env,
+    )
     return process
 
 
@@ -300,9 +321,7 @@ async def mk_context(top_level_span: trace.Span) -> SemgrepContext:
 
     use_rpc = os.environ.get("USE_SEMGREP_RPC", "true").lower() == "true"
 
-    resp = await run_semgrep(top_level_span, ["--pro", "--version"])
-    # wait for the command to exit so the exit code is set
-    await resp.communicate()
+    resp = await run_semgrep_process_sync(top_level_span, ["--pro", "--version"])
 
     # The user doesn't seem to have the Pro Engine installed.
     # That's fine, let's just run the free engine, without the
@@ -323,7 +342,7 @@ async def mk_context(top_level_span: trace.Span) -> SemgrepContext:
         )
     else:
         logging.info("Spawning `semgrep mcp` daemon...")
-        process = await run_semgrep(top_level_span, ["mcp", "--pro", "--trace"])
+        process = await run_semgrep_process_async(top_level_span, ["mcp", "--pro", "--trace"])
 
     return SemgrepContext(
         top_level_span=top_level_span,
@@ -338,18 +357,25 @@ async def run_semgrep_output(top_level_span: trace.Span | None, args: list[str])
     """
     Runs `semgrep` with the given arguments and returns the stdout.
     """
-    process = await run_semgrep(top_level_span, args)
-    stdout, stderr = await process.communicate()
+    process = await run_semgrep_process_sync(top_level_span, args)
+
+    if process.stdout is None or process.stderr is None:
+        raise McpError(
+            ErrorData(
+                code=INTERNAL_ERROR,
+                message="Error running semgrep: stdout or stderr is None",
+            )
+        )
 
     if process.returncode != 0:
         raise McpError(
             ErrorData(
                 code=INTERNAL_ERROR,
-                message=f"Error running semgrep: ({process.returncode}) {stderr.decode()}",
+                message=f"Error running semgrep: ({process.returncode}) {process.stderr.decode()}",
             )
         )
 
-    return stdout.decode()
+    return process.stdout.decode()
 
 
 async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> CliOutput:
