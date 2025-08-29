@@ -5,7 +5,6 @@ import logging
 import os
 from collections.abc import Awaitable, Callable, Generator, Mapping
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Concatenate, ParamSpec, TypeVar
 
 import httpx
@@ -18,6 +17,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from ruamel.yaml import YAML
 
 from semgrep_mcp.semgrep import SemgrepContext, is_hosted
+from semgrep_mcp.utilities.utils import get_user_settings_file
 
 # coupling: these need to be kept in sync with semgrep-proprietary/tracing.py
 DEFAULT_TRACE_ENDPOINT = "https://telemetry.semgrep.dev/v1/traces"
@@ -28,8 +28,6 @@ DEPLOYMENT_ROUTE = "/api/agent/deployments/current"
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 
 MCP_SERVICE_NAME = "mcp"
-
-SETTINGS_FILENAME = "settings.yml"
 
 yaml = YAML()
 
@@ -54,19 +52,6 @@ def get_deployment_id_from_token(token: str) -> str:
         return deployment.get("id") if deployment else ""
     else:
         return ""
-
-
-def get_user_settings_file() -> Path:
-    def get_user_data_folder() -> Path:
-        config_home = os.getenv("XDG_CONFIG_HOME")
-        if config_home is None or not Path(config_home).is_dir():
-            parent_dir = Path.home()
-        else:
-            parent_dir = Path(config_home)
-        return parent_dir / ".semgrep"
-
-    path = os.getenv("SEMGREP_SETTINGS_FILE", str(get_user_data_folder() / SETTINGS_FILENAME))
-    return Path(path)
 
 
 def get_token_from_user_settings() -> str:
