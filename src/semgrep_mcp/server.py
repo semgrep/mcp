@@ -653,11 +653,10 @@ async def semgrep_scan_with_custom_rule(
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-@mcp.tool()
 @with_tool_span()
-async def semgrep_scan(
+async def semgrep_scan_cli(
     ctx: Context,
-    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
+    code_files: list[CodeFile],
     config: str | None = CONFIG_FIELD,
 ) -> SemgrepScanResult | CliOutput:
     """
@@ -675,13 +674,10 @@ async def semgrep_scan(
     # Validate config
     config = validate_config(config)
 
-    # Validate code_files
-    validated_code_files = validate_code_files(code_files)
-
     temp_dir = None
     try:
         # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(validated_code_files)
+        temp_dir = create_temp_files_from_code_content(code_files)
         args = get_semgrep_scan_args(temp_dir, config)
         output = await run_semgrep_output(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
@@ -705,31 +701,22 @@ async def semgrep_scan(
             shutil.rmtree(temp_dir, ignore_errors=True)
 
 
-@mcp.tool()
 @with_tool_span()
 async def semgrep_scan_rpc(
     ctx: Context,
-    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
+    code_files: list[CodeFile],
 ) -> CliOutput:
     """
     Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
 
     This should run much faster than the comparative `semgrep_scan` tool.
-
-    Use this tool when you need to:
-      - scan code files for security vulnerabilities
-      - scan code files for other issues
-      - scan quickly
     """
-    # Validate code_files
-    # TODO: could this be slow if content is big?
-    validated_code_files = validate_code_files(code_files)
 
     temp_dir = None
     try:
         # TODO: perhaps should return more interpretable results?
         context: SemgrepContext = ctx.request_context.lifespan_context
-        cli_output = await run_semgrep_via_rpc(context, validated_code_files)
+        cli_output = await run_semgrep_via_rpc(context, code_files)
         return cli_output
     except McpError as e:
         raise e
@@ -746,6 +733,56 @@ async def semgrep_scan_rpc(
         if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@mcp.tool()
+@with_tool_span()
+async def semgrep_scan(
+    ctx: Context,
+    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
+    # TODO: currently only for CLI-based scans
+    config: str | None = CONFIG_FIELD,
+) -> SemgrepScanResult | CliOutput:
+    """
+    Runs a Semgrep scan on provided code content and returns the findings in JSON format
+
+    Use this tool when you need to:
+      - scan code files for security vulnerabilities
+      - scan code files for other issues
+    """
+
+    # Implementer's note:
+    # Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
+    # CLI scan, or an RPC-based scan.
+    # Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
+    # I put this here, in a comment, so the MCP doesn't need to be aware
+    # of these differences.
+
+    validated_code_files = validate_code_files(code_files)
+
+    context: SemgrepContext = ctx.request_context.lifespan_context
+
+    paths = [cf.filename for cf in validated_code_files]
+
+    if context.process is not None:
+        if config is not None:
+            # This should hopefully just cause the agent to call us back with
+            # the correct parameters.
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS,
+                    message="""
+                      `config` is not supported when using the RPC-based scan.
+                      Try calling again without that parameter set?
+                    """,
+                )
+            )
+
+        logging.info(f"Running RPC-based scan on paths: {paths}")
+        return await semgrep_scan_rpc(ctx, validated_code_files)
+    else:
+        logging.info(f"Running CLI-based scan on paths: {paths}")
+        return await semgrep_scan_cli(ctx, validated_code_files, config)
 
 
 @mcp.tool()
