@@ -318,6 +318,9 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 # MCP Server
 # ---------------------------------------------------------------------------------
 
+# Set environment variable to track scans by MCP
+os.environ["SEMGREP_MCP"] = "true"
+
 
 @asynccontextmanager
 async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
