@@ -1,7 +1,7 @@
 # Semgrep MCP Makefile
 # Development and deployment commands for the Semgrep MCP server
 
-.PHONY: help install install-dev run test test-claude-integration lint format typecheck clean configure-claude-code check-claude-config dev-setup pre-commit-install check dev build
+.PHONY: help install install-dev run test test-claude-integration lint format typecheck clean configure-claude-code check-claude-config dev-setup pre-commit-install check dev build docker
 
 # Default target
 help:
@@ -115,3 +115,9 @@ dev: format check
 build:
 	@echo "Building distribution packages..."
 	uv build
+
+docker:
+	# If you get an error related to installing the Pro Engine, try `semgrep
+	# logout; semgrep login` to ensure you have an up-to-date token. Also make
+	# sure you have `yq` installed.
+	SEMGREP_APP_TOKEN=$$(yq .api_token $$HOME/.semgrep/settings.yml) docker build -t semgrep-mcp . --secret id=semgrep_app_token,env=SEMGREP_APP_TOKEN
