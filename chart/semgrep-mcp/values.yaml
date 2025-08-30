@@ -29,11 +29,11 @@ env: []
     value: "your-semgrep-url-here"
   - name: SEMGREP_RULE_SCHEMA_DISABLED
     value: "true"
-  - name: SEMGREP_SUPPORTED_LANGUAGES_DISABLED
+  - name: GET_SUPPORTED_LANGUAGES_DISABLED
     value: "true"
   - name: SEMGREP_FINDINGS_DISABLED
     value: "true"
-  - name: SEMGREP_SCAN_CUSTOM_RULE_DISABLED
+  - name: SEMGREP_SCAN_WITH_CUSTOM_RULE_DISABLED
     value: "true"
   - name: SEMGREP_SCAN_DISABLED
     value: "true"
@@ -43,7 +43,7 @@ env: []
     value: "true"
   - name: SECURITY_CHECK_DISABLED
     value: "true"
-  - name: SEMGREP_AST_DISABLED
+  - name: GET_ABSTRACT_SYNTAX_TREE_DISABLED
     value: "true"
-  - name: SEMGREP_RULE_PROMPT_DISABLED
-    value: "true"
+  - name: WRITE_CUSTOM_SEMGREP_RULE_DISABLED
+    value: "true"  
