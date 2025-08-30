@@ -23,5 +23,27 @@ ingress:
 resources: {}
 
 env: []
-# - name: SEMGREP_APP_TOKEN
-#   value: "your-token-here" 
+  # - name: SEMGREP_APP_TOKEN
+  #   value: "your-token-here" # consider mounting as a secret
+  - name: SEMGREP_URL
+    value: "your-semgrep-url-here"
+  - name: SEMGREP_RULE_SCHEMA_DISABLED
+    value: "true"
+  - name: SEMGREP_SUPPORTED_LANGUAGES_DISABLED
+    value: "true"
+  - name: SEMGREP_FINDINGS_DISABLED
+    value: "true"
+  - name: SEMGREP_SCAN_CUSTOM_RULE_DISABLED
+    value: "true"
+  - name: SEMGREP_SCAN_DISABLED
+    value: "true"
+  # - name: SEMGREP_SCAN_RPC_DISABLED
+  #   value: "true"
+  - name: SEMGREP_SCAN_LOCAL_DISABLED
+    value: "true"
+  - name: SECURITY_CHECK_DISABLED
+    value: "true"
+  - name: SEMGREP_AST_DISABLED
+    value: "true"
+  - name: SEMGREP_RULE_PROMPT_DISABLED
+    value: "true"
