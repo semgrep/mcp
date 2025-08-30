@@ -37,7 +37,7 @@ classifiers = [
 ]
 dependencies = [
     "mcp==1.12.2",
-    "semgrep==1.133.0",
+    "semgrep==1.134.0",
     "opentelemetry-api>=1.25.0",
     "opentelemetry-sdk>=1.25.0",
 ]
