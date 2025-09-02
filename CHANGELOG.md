@@ -1,4 +1,16 @@
 # Changelog
+## [0.7.0] - 2025-09-02
+- Added the ability to remove certain tools by specifying environment variables
+  when hosting the server, e.g. `SEMGREP_SCAN_DISABLED=true` or `SEMGREP_FINDINGS_DISABLED=true`.
+- Consolidated the `semgrep_scan` and `semgrep_scan_rpc` tools into one tool. You
+  can specify to fall back to the `semgrep_scan` CLI-based tool by specifying `USE_SEMGREP_RPC=false`
+  when hosting the server.
+- Fixed a bug where Semgrep app tokens from being logged in via `semgrep login` on the local filesystem
+  would not be properly sourced
+- Fixed a bug where `.decode()` would be called on a `None` object when invoking Semgrep, sometimes
+- Fixed a bug where in `gemini-cli`, Semgrep MCP tools would be skipped due to its types not
+  being renderable into the parameter schema
+
 ## [0.6.0] - 2025-08-22
 
 - Fixed a bug breaking authentication when running the Semgrep daemon
