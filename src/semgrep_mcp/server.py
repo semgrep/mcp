@@ -1089,6 +1089,34 @@ async def health(request: Request) -> JSONResponse:
 
 
 # ---------------------------------------------------------------------------------
+# Disabling tools
+# ---------------------------------------------------------------------------------
+
+TOOL_DISABLE_ENV_VARS = {
+    "SEMGREP_RULE_SCHEMA_DISABLED": "semgrep_rule_schema",
+    "GET_SUPPORTED_LANGUAGES_DISABLED": "get_supported_languages",
+    "SEMGREP_FINDINGS_DISABLED": "semgrep_findings",
+    "SEMGREP_SCAN_WITH_CUSTOM_RULE_DISABLED": "semgrep_scan_with_custom_rule",
+    "SEMGREP_SCAN_DISABLED": "semgrep_scan",
+    "SEMGREP_SCAN_LOCAL_DISABLED": "semgrep_scan_local",
+    "SECURITY_CHECK_DISABLED": "security_check",
+    "GET_ABSTRACT_SYNTAX_TREE_DISABLED": "get_abstract_syntax_tree",
+    "WRITE_CUSTOM_SEMGREP_RULE_DISABLED": "write_custom_semgrep_rule",
+}
+
+
+def deregister_tools() -> None:
+    for env_var, tool_name in TOOL_DISABLE_ENV_VARS.items():
+        is_disabled = os.environ.get(env_var, "false").lower() == "true"
+
+        if is_disabled:
+            # for the time being, while there is no way to API-level remove tools,
+            # we'll just mutate the internal `_tools`, because this language does
+            # not stop us from doing so
+            del mcp._tool_manager._tools[tool_name]
+
+
+# ---------------------------------------------------------------------------------
 # MCP Server Entry Point
 # ---------------------------------------------------------------------------------
 
@@ -1126,6 +1154,9 @@ def main(transport: str, semgrep_path: str | None) -> None:
     # Set the executable path in case it's manually specified.
     if semgrep_path:
         set_semgrep_executable(semgrep_path)
+
+    # based on env vars, disable certain tools
+    deregister_tools()
 
     if transport == "stdio":
         mcp.run(transport="stdio")
