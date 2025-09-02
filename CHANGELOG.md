@@ -1,4 +1,7 @@
 # Changelog
+## [0.7.0] - 2025-09-02
+
+
 ## [0.6.0] - 2025-08-22
 
 - Fixed a bug breaking authentication when running the Semgrep daemon
