@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from ruamel import yaml
+from ruamel.yaml import YAML
 
 SETTINGS_FILENAME = "settings.yml"
 
@@ -29,7 +29,8 @@ def get_semgrep_app_token() -> str | None:
     settings_token: str | None = None
     if user_settings_file.exists():
         with open(user_settings_file) as f:
-            settings = yaml.safe_load(f)
+            yaml = YAML(typ='safe', pure=True)
+            settings = yaml.load(f)
             settings_token = settings.get("api_token")
 
     if settings_token is None:
