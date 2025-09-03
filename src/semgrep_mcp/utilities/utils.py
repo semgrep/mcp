@@ -24,16 +24,17 @@ def get_semgrep_app_token() -> str | None:
     Returns the deployment ID the token is for, if token is valid
     """
 
-    user_settings_file = get_user_settings_file()
+    # Prioritize environment variable first
+    env_token = os.environ.get("SEMGREP_APP_TOKEN")
+    if env_token is not None:
+        return env_token
 
-    settings_token: str | None = None
+    # Fall back to settings file if environment variable is not set
+    user_settings_file = get_user_settings_file()
     if user_settings_file.exists():
         with open(user_settings_file) as f:
             yaml = YAML(typ='safe', pure=True)
             settings = yaml.load(f)
-            settings_token = settings.get("api_token")
+            return settings.get("api_token")
 
-    if settings_token is None:
-        return os.environ.get("SEMGREP_APP_TOKEN")
-    else:
-        return settings_token
+    return None
