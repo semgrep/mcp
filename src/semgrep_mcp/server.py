@@ -1101,7 +1101,6 @@ TOOL_DISABLE_ENV_VARS = {
     "SEMGREP_SCAN_LOCAL_DISABLED": "semgrep_scan_local",
     "SECURITY_CHECK_DISABLED": "security_check",
     "GET_ABSTRACT_SYNTAX_TREE_DISABLED": "get_abstract_syntax_tree",
-    "WRITE_CUSTOM_SEMGREP_RULE_DISABLED": "write_custom_semgrep_rule",
 }
 
 
