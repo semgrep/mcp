@@ -43,7 +43,7 @@ jobs:
         run: |
           CODE_ARTIFACT_AUTH_TOKEN=$(aws codeartifact get-authorization-token --domain r2c --domain-owner 338683922796 --query authorizationToken --output text)
           echo "::add-mask::$CODE_ARTIFACT_AUTH_TOKEN"
-          uv add semgrep==$NEW_SEMGREP_VERSION
+          uv add semgrep>="$NEW_SEMGREP_VERSION"
       - name: Commit and push
         id: commit
         env:
