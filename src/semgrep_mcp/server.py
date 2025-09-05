@@ -239,10 +239,10 @@ def validate_local_files(local_files: list[dict[str, str]]) -> list[LocalCodeFil
             ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
         ) from e
     for file in validated_local_files:
-        if os.path.isabs(file.path):
+        if not os.path.isabs(file.path):
             raise McpError(
                 ErrorData(
-                    code=INVALID_PARAMS, message="code_files.filename must be a relative path"
+                    code=INVALID_PARAMS, message="code_files.filename must be a absolute path"
                 )
             )
 
