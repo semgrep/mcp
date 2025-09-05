@@ -37,7 +37,7 @@ from semgrep_mcp.utilities.utils import get_semgrep_app_token
 # Constants
 # ---------------------------------------------------------------------------------
 
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"

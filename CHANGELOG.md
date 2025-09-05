@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.7.2] - 2025-09-05
+- Fixed a bug when loading local ~/.semgrep/settings.yml file using deprecated
+  yaml.safe_load (PR#168)
+
 ## [0.7.1] - 2025-09-03
 - Fixed a bug where tool deregistration would accidentally
   attempt to deregister a prompt
