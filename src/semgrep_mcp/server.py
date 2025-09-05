@@ -17,6 +17,9 @@ from mcp.types import (
     INVALID_PARAMS,
     ErrorData,
 )
+from opentelemetry.trace.propagation import (
+    get_current_span,
+)
 from pydantic import Field, ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
@@ -30,7 +33,13 @@ from semgrep_mcp.semgrep import (
     set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
-from semgrep_mcp.utilities.tracing import start_tracing, with_tool_span
+from semgrep_mcp.utilities.tracing import (
+    attach_metrics,
+    attach_rpc_scan_metrics,
+    attach_scan_metrics,
+    start_tracing,
+    with_tool_span,
+)
 from semgrep_mcp.utilities.utils import get_semgrep_app_token
 from semgrep_mcp.version import __version__
 
@@ -681,6 +690,9 @@ async def semgrep_scan_cli(
         output = await run_semgrep_output(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
         remove_temp_dir_from_results(results, temp_dir)
+
+        attach_scan_metrics(get_current_span(), results, config)
+
         return results
 
     except McpError as e:
@@ -716,6 +728,9 @@ async def semgrep_scan_rpc(
         # TODO: perhaps should return more interpretable results?
         context: SemgrepContext = ctx.request_context.lifespan_context
         cli_output = await run_semgrep_via_rpc(context, code_files)
+
+        attach_rpc_scan_metrics(get_current_span(), cli_output)
+
         return cli_output
     except McpError as e:
         raise e
@@ -818,12 +833,26 @@ async def semgrep_scan_local(
 
     temp_dir = None
     try:
-        results = []
+        results, skipped_rules, scanned_paths, findings, errors = [], [], [], [], []
         for cf in validated_local_files:
             args = get_semgrep_scan_args(cf.path, config)
             output = await run_semgrep_output(top_level_span=None, args=args)
             result: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
             results.append(result)
+            skipped_rules.extend(result.skipped_rules)
+            scanned_paths.extend(result.paths["scanned"])
+            findings.extend(result.results)
+            errors.extend(result.errors)
+
+        attach_metrics(
+            get_current_span(),
+            results[0].version,
+            skipped_rules,
+            scanned_paths,
+            findings,
+            errors,
+            config,
+        )
         return results
 
     except McpError as e:
@@ -881,6 +910,9 @@ Here are the details of the security issues found:
         args = get_semgrep_scan_args(temp_dir)
         output = await run_semgrep_output(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+
+        attach_scan_metrics(get_current_span(), results, None)
+
         remove_temp_dir_from_results(results, temp_dir)
 
         if len(results.results) > 0:

@@ -5,7 +5,7 @@ import logging
 import os
 from collections.abc import Awaitable, Callable, Generator, Mapping
 from contextlib import contextmanager
-from typing import Concatenate, ParamSpec, TypeVar
+from typing import Any, Concatenate, ParamSpec, TypeVar
 
 import httpx
 from mcp.server.fastmcp import Context
@@ -16,7 +16,9 @@ from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from ruamel.yaml import YAML
 
+from semgrep_mcp.models import SemgrepScanResult
 from semgrep_mcp.semgrep import SemgrepContext, is_hosted
+from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.utils import get_user_settings_file
 from semgrep_mcp.version import __version__
 
@@ -66,6 +68,49 @@ def get_token_from_user_settings() -> str:
         return ""
 
     return yaml_contents.get("api_token", "")
+
+
+def attach_metrics(
+    span: trace.Span,
+    version: str,
+    skipped_rules: list[str],
+    paths: list[Any],
+    findings: list[dict[str, Any]],
+    errors: list[dict[str, Any]],
+    config: str | None,
+):
+    span.set_attribute("metrics.semgrep_version", version)
+    span.set_attribute("metrics.num_skipped_rules", len(skipped_rules))
+    span.set_attribute("metrics.rule_config", config if config else "default")
+    span.set_attribute("metrics.num_scanned_files", len(paths))
+    span.set_attribute("metrics.num_findings", len(findings))
+    span.set_attribute("metrics.num_errors", len(errors))
+    # TODO: the actual findings and errors (not just the number). This might require
+    # us setting up Datadog metrics and not just tracing.
+
+
+def attach_scan_metrics(span: trace.Span, results: SemgrepScanResult, config: str | None):
+    attach_metrics(
+        span,
+        results.version,
+        results.skipped_rules,
+        results.paths["scanned"],
+        results.results,
+        results.errors,
+        config,
+    )
+
+
+def attach_rpc_scan_metrics(span: trace.Span, results: CliOutput):
+    span.set_attribute(
+        "metrics.semgrep_version", results.version.value if results.version else "unknown"
+    )
+    span.set_attribute("metrics.num_skipped_rules", len(results.skipped_rules))
+    # Rules for RPC scans are cached by pulling the user's rules.
+    span.set_attribute("metrics.rule_config", "cached")
+    span.set_attribute("metrics.num_scanned_files", len(results.paths.scanned))
+    span.set_attribute("metrics.num_findings", len(results.results))
+    span.set_attribute("metrics.num_errors", len(results.errors))
 
 
 ################################################################################
