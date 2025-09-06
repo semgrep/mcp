@@ -134,7 +134,7 @@ def with_span(
     tracer = trace.get_tracer(MCP_SERVICE_NAME)
 
     context = trace.set_span_in_context(parent_span)
-    with tracer.start_span(name, context=context) as span:
+    with tracer.start_as_current_span(name, context=context) as span:
         yield span
 
 
