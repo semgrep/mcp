@@ -32,13 +32,11 @@ from semgrep_mcp.semgrep import (
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.tracing import start_tracing, with_tool_span
 from semgrep_mcp.utilities.utils import get_semgrep_app_token
+from semgrep_mcp.version import __version__
 
 # ---------------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------------
-
-__version__ = "0.8.1"
-
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"
 SEMGREP_API_VERSION = "v1"
@@ -1150,6 +1148,7 @@ def main(transport: str, semgrep_path: str | None) -> None:
     For stdio, it will read from stdin and write to stdout.
     For streamable-http and sse, it will start an HTTP server on port 8000.
     """
+    logging.info(f"Starting Semgrep MCP server v{__version__}")
 
     # Set the executable path in case it's manually specified.
     if semgrep_path:

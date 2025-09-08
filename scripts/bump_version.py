@@ -40,10 +40,10 @@ def update_pyproject_toml(file_path: Path, new_version: str) -> None:
     write_toml(file_path, data)
 
 
-def update_server_py(file_path: Path, new_version: str) -> None:
-    """Update version in server.py."""
+def update_version_py(file_path: Path, new_version: str) -> None:
+    """Update version in version.py."""
     content = file_path.read_text()
-    # Update version pattern in server.py
+    # Update version pattern in version.py
     new_content = re.sub(
         r'__version__\s*=\s*["\'][\d.]+["\']', f'__version__ = "{new_version}"', content
     )
@@ -100,14 +100,14 @@ def main():
 
     # Update files
     update_pyproject_toml(pyproject_path, new_version)
-    update_server_py(root_dir / "src" / "semgrep_mcp" / "server.py", new_version)
+    update_version_py(root_dir / "src" / "semgrep_mcp" / "version.py", new_version)
     update_changelog(root_dir / "CHANGELOG.md", new_version)
     update_chart_yaml(root_dir / "chart" / "semgrep-mcp" / "Chart.yaml", new_version)
 
     print(f"Successfully bumped version from {current_version} to {new_version}")
     print("Files updated:")
     print("- pyproject.toml")
-    print("- src/semgrep_mcp/server.py")
+    print("- src/semgrep_mcp/version.py")
     print("- CHANGELOG.md")
     print("- chart/semgrep-mcp/Chart.yaml")
 
