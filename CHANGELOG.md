@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.8.0] - 2025-09-08
+- Bumped Semgrep version to 1.135.0 for better tracing
+
+
 ## [0.7.2] - 2025-09-05
 - Fixed a bug when loading local ~/.semgrep/settings.yml file using deprecated
   yaml.safe_load (PR#168)
