@@ -37,7 +37,7 @@ from semgrep_mcp.utilities.utils import get_semgrep_app_token
 # Constants
 # ---------------------------------------------------------------------------------
 
-__version__ = "0.7.0"
+__version__ = "0.7.2"
 
 SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 SEMGREP_API_URL = f"{SEMGREP_URL}/api"
@@ -1101,7 +1101,6 @@ TOOL_DISABLE_ENV_VARS = {
     "SEMGREP_SCAN_LOCAL_DISABLED": "semgrep_scan_local",
     "SECURITY_CHECK_DISABLED": "security_check",
     "GET_ABSTRACT_SYNTAX_TREE_DISABLED": "get_abstract_syntax_tree",
-    "WRITE_CUSTOM_SEMGREP_RULE_DISABLED": "write_custom_semgrep_rule",
 }
 
 
