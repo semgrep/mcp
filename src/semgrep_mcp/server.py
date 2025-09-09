@@ -321,6 +321,7 @@ def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> N
 
 # Set environment variable to track scans by MCP
 os.environ["SEMGREP_MCP"] = "true"
+os.environ["SEMGREP_USER_AGENT_APPEND"] = "(MCP)"
 
 
 @asynccontextmanager
