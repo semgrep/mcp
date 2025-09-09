@@ -1,4 +1,7 @@
 # Changelog
+## [0.8.1] - 2025-09-09
+- Fixed a bug where scans are incorrectly tracked internally
+
 
 ## [0.8.0] - 2025-09-08
 - Bumped Semgrep version to 1.135.0 for better tracing
