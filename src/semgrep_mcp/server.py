@@ -55,18 +55,16 @@ CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and '
 LOCAL_CODE_FILES_FIELD = Field(
     description=("List of dictionaries with 'path' pointing to the absolute path of the code file")
 )
-
-
 CONFIG_FIELD = Field(
     description="Optional Semgrep configuration string (e.g. 'p/docker', 'p/xss', 'auto')",
     default=None,
 )
 GIT_USERNAME_FIELD = Field(
-    description="""Git username. Use `git config user.name` to get the username. 
+    description="""Git username. Use `git config user.name` to get the username.
     If unable to get the username, set this to None."""
 )
 GIT_REPO_FIELD = Field(
-    description="""Git repository. Use `git config remote.origin.url` to get the repository. 
+    description="""Git repository. Use `git config remote.origin.url` to get the repository.
     If unable to get the repository, set this to None."""
 )
 
