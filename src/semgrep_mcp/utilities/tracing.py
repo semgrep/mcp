@@ -18,6 +18,7 @@ from ruamel.yaml import YAML
 
 from semgrep_mcp.semgrep import SemgrepContext, is_hosted
 from semgrep_mcp.utilities.utils import get_user_settings_file
+from semgrep_mcp.version import __version__
 
 # coupling: these need to be kept in sync with semgrep-proprietary/tracing.py
 DEFAULT_TRACE_ENDPOINT = "https://telemetry.semgrep.dev/v1/traces"
@@ -96,6 +97,7 @@ def start_tracing(name: str) -> Generator[trace.Span, None, None]:
         {
             SERVICE_NAME: MCP_SERVICE_NAME,
             DEPLOYMENT_ENVIRONMENT: env,
+            "metrics.mcp_version": __version__,
             "metrics.is_hosted": is_hosted(),
             "metrics.deployment_id": get_deployment_id_from_token(token),
         }
