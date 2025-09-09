@@ -641,6 +641,9 @@ async def semgrep_scan_with_custom_rule(
         args = get_semgrep_scan_args(temp_dir, rule_file_path)
         output = await run_semgrep_output(top_level_span=None, args=args)
         results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+
+        attach_scan_metrics(get_current_span(), results, "custom")
+
         remove_temp_dir_from_results(results, temp_dir)
         return results
 
