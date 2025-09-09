@@ -46,10 +46,10 @@ def is_hosted() -> bool:
 
 
 # Semgrep utilities
-def find_semgrep_path() -> str | None:
+def find_semgrep_info() -> tuple[str | None, str]:
     """
     Dynamically find semgrep in PATH or common installation directories
-    Returns: Path to semgrep executable or None if not found
+    Returns: Path to semgrep executable and version or (None, "unknown") if not found
     """
     # Common paths where semgrep might be installed
     common_paths = [
@@ -81,10 +81,10 @@ def find_semgrep_path() -> str | None:
         # For 'semgrep' (without path), check if it's in PATH
         if semgrep_path == "semgrep":
             try:
-                subprocess.run(
+                process = subprocess.run(
                     [semgrep_path, "--version"], check=True, capture_output=True, text=True
                 )
-                return semgrep_path
+                return semgrep_path, process.stdout.strip()
             except (subprocess.SubprocessError, FileNotFoundError):
                 continue
 
@@ -95,14 +95,33 @@ def find_semgrep_path() -> str | None:
 
             # Try executing semgrep at this path
             try:
-                subprocess.run(
+                process = subprocess.run(
                     [semgrep_path, "--version"], check=True, capture_output=True, text=True
                 )
-                return semgrep_path
+                return semgrep_path, process.stdout.strip()
             except (subprocess.SubprocessError, FileNotFoundError):
                 continue
 
-    return None
+    return None, "unknown"
+
+
+def find_semgrep_path() -> str | None:
+    """
+    Find the path to the semgrep executable
+
+    Returns:
+        Path to semgrep executable or None if not found
+    """
+    semgrep_path, _ = find_semgrep_info()
+    return semgrep_path
+
+
+def get_semgrep_version() -> str:
+    """
+    Get the version of the semgrep binary.
+    """
+    _, semgrep_version = find_semgrep_info()
+    return semgrep_version
 
 
 async def ensure_semgrep_available() -> str:
