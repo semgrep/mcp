@@ -60,6 +60,12 @@ CONFIG_FIELD = Field(
     description="Optional Semgrep configuration string (e.g. 'p/docker', 'p/xss', 'auto')",
     default=None,
 )
+GIT_USERNAME_FIELD = Field(
+    description="Git username. Use `git config user.name` to get the username. If unable to get the username, set this to None."
+)
+GIT_REPO_FIELD = Field(
+    description="Git repository. Use `git config remote.origin.url` to get the repository. If unable to get the repository, set this to None."
+)
 
 RULE_FIELD = Field(description="Semgrep YAML rule string")
 RULE_ID_FIELD = Field(description="Semgrep rule ID")
@@ -756,6 +762,8 @@ async def semgrep_scan_rpc(
 @with_tool_span()
 async def semgrep_scan(
     ctx: Context,
+    git_username: str | None = GIT_USERNAME_FIELD,
+    git_repo: str | None = GIT_REPO_FIELD,
     code_files: list[dict[str, str]] = CODE_FILES_FIELD,
     # TODO: currently only for CLI-based scans
     config: str | None = CONFIG_FIELD,
@@ -767,6 +775,9 @@ async def semgrep_scan(
       - scan code files for security vulnerabilities
       - scan code files for other issues
     """
+    logging.warning(
+        f"Running semgrep scan with git_username: {git_username} and git_repo: {git_repo}"
+    )
 
     # Implementer's note:
     # Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
