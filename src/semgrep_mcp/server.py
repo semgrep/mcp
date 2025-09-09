@@ -10,14 +10,24 @@ from typing import Any
 
 import click
 import httpx
+from mcp.server.auth.middleware.auth_context import get_access_token
+from mcp.server.auth.provider import (
+    AccessToken,
+    AuthorizationCode,
+    AuthorizationParams,
+    OAuthAuthorizationServerProvider,
+    RefreshToken,
+)
+from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.shared.auth import OAuthClientInformationFull, OAuthToken
 from mcp.shared.exceptions import McpError
 from mcp.types import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
     ErrorData,
 )
-from pydantic import Field, ValidationError
+from pydantic import AnyHttpUrl, Field, ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -32,6 +42,78 @@ from semgrep_mcp.semgrep import (
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.tracing import start_tracing, with_tool_span
 from semgrep_mcp.utilities.utils import get_semgrep_app_token
+
+
+# Create a simple auth provider that just checks for bearer token
+class SimpleBearerAuthProvider(OAuthAuthorizationServerProvider):
+    async def load_access_token(self, token: str):
+        if token:
+            try:
+                return AccessToken(
+                    token=token,
+                    client_id="test-client",  # For testing purposes
+                    scopes=["api"],
+                    expires_at=None,
+                )
+            except Exception:
+                return None
+        return None
+
+    async def get_client(self, client_id: str):
+        return None
+
+    async def register_client(self, client_info: OAuthClientInformationFull):
+        return None
+
+    async def authorize(self, client: OAuthClientInformationFull, params: AuthorizationParams):
+        return ""
+
+    async def load_authorization_code(
+        self, client: OAuthClientInformationFull, authorization_code: str
+    ):
+        return None
+
+    async def exchange_authorization_code(
+        self, client: OAuthClientInformationFull, authorization_code: AuthorizationCode
+    ):
+        return OAuthToken(
+            access_token="dummy_token",
+            refresh_token="dummy_refresh_token",
+            expires_in=3600,
+            token_type="Bearer",
+        )
+
+    async def load_refresh_token(self, client: OAuthClientInformationFull, refresh_token: str):
+        return None
+
+    async def exchange_refresh_token(
+        self, client: OAuthClientInformationFull, refresh_token: str, scopes: list[str]
+    ):
+        return OAuthToken(
+            access_token="dummy_token",
+            refresh_token="dummy_refresh_token",
+            expires_in=3600,
+            token_type="Bearer",
+        )
+
+    async def revoke_token(self, token: AccessToken | RefreshToken):
+        return None
+
+
+# Create auth settings
+auth_settings = AuthSettings(
+    issuer_url=AnyHttpUrl("http://localhost:8000"),
+    client_registration_options=ClientRegistrationOptions(
+        enabled=False,  # Disable client registration
+        valid_scopes=["api"],
+        default_scopes=["api"],
+    ),
+    required_scopes=["api"],
+    resource_server_url=AnyHttpUrl("http://localhost:8000"),
+)
+
+# Create auth provider instance
+auth_provider = SimpleBearerAuthProvider()
 
 # ---------------------------------------------------------------------------------
 # Constants
@@ -329,6 +411,10 @@ async def server_lifespan(_server: FastMCP) -> AsyncIterator[SemgrepContext]:
     """Manage server startup and shutdown lifecycle."""
     # Initialize resources on startup with tracing
     # MCP requires Pro Engine
+
+    access_token = get_access_token()
+    logging.info(f"access_token: {access_token.token if access_token else None}")
+
     with start_tracing("mcp-python-server") as span:
         context = await mk_context(top_level_span=span)
 
@@ -344,6 +430,8 @@ mcp = FastMCP(
     stateless_http=True,
     json_response=True,
     lifespan=server_lifespan,
+    auth=auth_settings,
+    auth_server_provider=auth_provider,
 )
 
 http_client = httpx.AsyncClient()
