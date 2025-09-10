@@ -186,7 +186,7 @@ class TestClaudeCodeIntegration:
 
             # Wait for response (timeout after 5 seconds)
             try:
-                stdout, stderr = process.communicate(timeout=5)
+                stdout, _ = process.communicate(timeout=5)
 
                 # Check that we got a response
                 assert stdout, "No response from MCP server"
