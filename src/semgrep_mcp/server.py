@@ -27,6 +27,7 @@ from starlette.responses import JSONResponse
 from semgrep_mcp.models import CodeFile, Finding, LocalCodeFile, SemgrepScanResult
 from semgrep_mcp.semgrep import (
     SemgrepContext,
+    get_semgrep_version,
     mk_context,
     run_semgrep_output,
     run_semgrep_via_rpc,
@@ -1183,7 +1184,9 @@ def main(transport: str, semgrep_path: str | None) -> None:
     For stdio, it will read from stdin and write to stdout.
     For streamable-http and sse, it will start an HTTP server on port 8000.
     """
-    logging.info(f"Starting Semgrep MCP server v{__version__}")
+    logging.info(
+        f"Starting Semgrep MCP server v{__version__}, Semgrep version v{get_semgrep_version()}"
+    )
 
     # Set the executable path in case it's manually specified.
     if semgrep_path:

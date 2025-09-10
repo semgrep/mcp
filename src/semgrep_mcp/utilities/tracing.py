@@ -17,7 +17,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from ruamel.yaml import YAML
 
 from semgrep_mcp.models import SemgrepScanResult
-from semgrep_mcp.semgrep import SemgrepContext, is_hosted
+from semgrep_mcp.semgrep import SemgrepContext, get_semgrep_version, is_hosted
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.utils import get_user_settings_file
 from semgrep_mcp.version import __version__
@@ -142,6 +142,7 @@ def start_tracing(name: str) -> Generator[trace.Span, None, None]:
         {
             SERVICE_NAME: MCP_SERVICE_NAME,
             DEPLOYMENT_ENVIRONMENT: env,
+            "metrics.semgrep_version": get_semgrep_version(),
             "metrics.mcp_version": __version__,
             "metrics.is_hosted": is_hosted(),
             "metrics.deployment_id": get_deployment_id_from_token(token),
