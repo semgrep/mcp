@@ -17,9 +17,8 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from ruamel.yaml import YAML
 
 from semgrep_mcp.models import SemgrepScanResult
-from semgrep_mcp.semgrep import SemgrepContext, get_semgrep_version, is_hosted
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
-from semgrep_mcp.utilities.utils import get_user_settings_file
+from semgrep_mcp.utilities.utils import get_semgrep_version, get_user_settings_file, is_hosted
 from semgrep_mcp.version import __version__
 
 # coupling: these need to be kept in sync with semgrep-proprietary/tracing.py
@@ -33,6 +32,7 @@ SEMGREP_URL = os.environ.get("SEMGREP_URL", "https://semgrep.dev")
 MCP_SERVICE_NAME = "mcp"
 
 yaml = YAML()
+tracing_disabled = os.environ.get("SEMGREP_MCP_DISABLE_TRACING", "").lower() == "true"
 
 ################################################################################
 # Metrics Helpers #
@@ -71,7 +71,7 @@ def get_token_from_user_settings() -> str:
 
 
 def attach_metrics(
-    span: trace.Span,
+    span: trace.Span | None,
     version: str,
     skipped_rules: list[str],
     paths: list[Any],
@@ -79,6 +79,8 @@ def attach_metrics(
     errors: list[dict[str, Any]],
     config: str | None,
 ):
+    if span is None:
+        return
     span.set_attribute("metrics.semgrep_version", version)
     span.set_attribute("metrics.num_skipped_rules", len(skipped_rules))
     span.set_attribute("metrics.rule_config", config if config else "default")
@@ -89,7 +91,9 @@ def attach_metrics(
     # us setting up Datadog metrics and not just tracing.
 
 
-def attach_scan_metrics(span: trace.Span, results: SemgrepScanResult, config: str | None):
+def attach_scan_metrics(span: trace.Span | None, results: SemgrepScanResult, config: str | None):
+    if span is None:
+        return
     attach_metrics(
         span,
         results.version,
@@ -101,7 +105,9 @@ def attach_scan_metrics(span: trace.Span, results: SemgrepScanResult, config: st
     )
 
 
-def attach_rpc_scan_metrics(span: trace.Span, results: CliOutput):
+def attach_rpc_scan_metrics(span: trace.Span | None, results: CliOutput):
+    if span is None:
+        return
     span.set_attribute(
         "metrics.semgrep_version", results.version.value if results.version else "unknown"
     )
@@ -114,78 +120,93 @@ def attach_rpc_scan_metrics(span: trace.Span, results: CliOutput):
 
 
 ################################################################################
-# Tracing #
+# Tracing Helpers #
 ################################################################################
 
 
 def get_trace_endpoint() -> tuple[str, str]:
     """Get the appropriate trace endpoint based on environment."""
-    env = os.environ.get("ENVIRONMENT", "dev").lower()
+    env = os.environ.get("SEMGREP_OTEL_ENDPOINT", "semgrep-dev").lower()
 
-    if env == "prod":
-        return (DEFAULT_TRACE_ENDPOINT, "prod")
-    elif env == "local":
-        return (DEFAULT_LOCAL_ENDPOINT, "local")
+    if env == "semgrep-prod":
+        return (DEFAULT_TRACE_ENDPOINT, "semgrep-prod")
+    elif env == "semgrep-local":
+        return (DEFAULT_LOCAL_ENDPOINT, "semgrep-local")
     else:
-        return (DEFAULT_DEV_ENDPOINT, "dev")
+        return (DEFAULT_DEV_ENDPOINT, "semgrep-dev")
+
+
+################################################################################
+# Tracing #
+################################################################################
 
 
 @contextmanager
-def start_tracing(name: str) -> Generator[trace.Span, None, None]:
+def start_tracing(name: str) -> Generator[trace.Span | None, None, None]:
     """Initialize OpenTelemetry tracing."""
-    (endpoint, env) = get_trace_endpoint()
+    if tracing_disabled:
+        yield None
+    else:
+        (endpoint, env) = get_trace_endpoint()
 
-    token = os.environ.get("SEMGREP_APP_TOKEN", get_token_from_user_settings())
+        token = os.environ.get("SEMGREP_APP_TOKEN", get_token_from_user_settings())
 
-    # Create resource with basic attributes
-    resource = Resource.create(
-        {
-            SERVICE_NAME: MCP_SERVICE_NAME,
-            DEPLOYMENT_ENVIRONMENT: env,
-            "metrics.semgrep_version": get_semgrep_version(),
-            "metrics.mcp_version": __version__,
-            "metrics.is_hosted": is_hosted(),
-            "metrics.deployment_id": get_deployment_id_from_token(token),
-        }
-    )
+        # Create resource with basic attributes
+        resource = Resource.create(
+            {
+                SERVICE_NAME: MCP_SERVICE_NAME,
+                DEPLOYMENT_ENVIRONMENT: env,
+                "metrics.semgrep_version": get_semgrep_version(),
+                "metrics.mcp_version": __version__,
+                "metrics.is_hosted": is_hosted(),
+                "metrics.deployment_id": get_deployment_id_from_token(token),
+            }
+        )
 
-    # Create tracer provider
-    provider = TracerProvider(resource=resource)
+        # Create tracer provider
+        provider = TracerProvider(resource=resource)
 
-    # Create OTLP exporter
-    exporter = OTLPSpanExporter(endpoint=endpoint)
+        # Create OTLP exporter
+        exporter = OTLPSpanExporter(endpoint=endpoint)
 
-    # Create span processor
-    processor = BatchSpanProcessor(exporter)
-    provider.add_span_processor(processor)
+        # Create span processor
+        processor = BatchSpanProcessor(exporter)
+        provider.add_span_processor(processor)
 
-    # Set the global tracer provider
-    trace.set_tracer_provider(provider)
+        # Set the global tracer provider
+        trace.set_tracer_provider(provider)
 
-    # Get tracer instance
-    tracer = trace.get_tracer(MCP_SERVICE_NAME)
+        # Get tracer instance
+        tracer = trace.get_tracer(MCP_SERVICE_NAME)
 
-    with tracer.start_as_current_span(name) as span:
-        trace_id = trace.format_trace_id(span.get_span_context().trace_id)
-        # Get a link to the trace in Datadog
-        link = f"(https://app.datadoghq.com/apm/trace/{trace_id})" if env != "local" else ""
+        with tracer.start_as_current_span(name) as span:
+            trace_id = trace.format_trace_id(span.get_span_context().trace_id)
+            # Get a link to the trace in Datadog
+            link = (
+                f"(https://app.datadoghq.com/apm/trace/{trace_id})"
+                if env != "semgrep-local"
+                else ""
+            )
 
-        logging.info("Tracing initialized")
-        logging.info(f"Tracing initialized with trace ID: {trace_id} {link}")
+            logging.info("Tracing initialized")
+            logging.info(f"Tracing initialized with trace ID: {trace_id} {link}")
 
-        yield span
+            yield span
 
 
 @contextmanager
 def with_span(
-    parent_span: trace.Span,
+    parent_span: trace.Span | None,
     name: str,
-) -> Generator[trace.Span, None, None]:
-    tracer = trace.get_tracer(MCP_SERVICE_NAME)
+) -> Generator[trace.Span | None, None, None]:
+    if tracing_disabled or parent_span is None:
+        yield None
+    else:
+        tracer = trace.get_tracer(MCP_SERVICE_NAME)
 
-    context = trace.set_span_in_context(parent_span)
-    with tracer.start_as_current_span(name, context=context) as span:
-        yield span
+        context = trace.set_span_in_context(parent_span)
+        with tracer.start_as_current_span(name, context=context) as span:
+            yield span
 
 
 R = TypeVar("R")
@@ -212,7 +233,7 @@ def with_tool_span(
     ) -> Callable[Concatenate[Context, P], Awaitable[R]]:
         @functools.wraps(func)
         async def wrapper(ctx: Context, *args: P.args, **kwargs: P.kwargs) -> R:
-            context: SemgrepContext = ctx.request_context.lifespan_context
+            context = ctx.request_context.lifespan_context
             name = span_name or func.__name__
 
             with with_span(context.top_level_span, name):

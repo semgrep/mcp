@@ -27,11 +27,9 @@ from starlette.responses import JSONResponse
 from semgrep_mcp.models import CodeFile, Finding, LocalCodeFile, SemgrepScanResult
 from semgrep_mcp.semgrep import (
     SemgrepContext,
-    get_semgrep_version,
     mk_context,
     run_semgrep_output,
     run_semgrep_via_rpc,
-    set_semgrep_executable,
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.tracing import (
@@ -41,7 +39,11 @@ from semgrep_mcp.utilities.tracing import (
     start_tracing,
     with_tool_span,
 )
-from semgrep_mcp.utilities.utils import get_semgrep_app_token
+from semgrep_mcp.utilities.utils import (
+    get_semgrep_app_token,
+    get_semgrep_version,
+    set_semgrep_executable,
+)
 from semgrep_mcp.version import __version__
 
 # ---------------------------------------------------------------------------------
