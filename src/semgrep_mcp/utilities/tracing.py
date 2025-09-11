@@ -182,7 +182,11 @@ def start_tracing(name: str) -> Generator[trace.Span | None, None, None]:
         with tracer.start_as_current_span(name) as span:
             trace_id = trace.format_trace_id(span.get_span_context().trace_id)
             # Get a link to the trace in Datadog
-            link = f"(https://app.datadoghq.com/apm/trace/{trace_id})" if env != "local" else ""
+            link = (
+                f"(https://app.datadoghq.com/apm/trace/{trace_id})"
+                if env != "semgrep-local"
+                else ""
+            )
 
             logging.info("Tracing initialized")
             logging.info(f"Tracing initialized with trace ID: {trace_id} {link}")
