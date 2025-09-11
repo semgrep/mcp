@@ -237,11 +237,11 @@ async def mk_context(top_level_span: trace.Span | None) -> SemgrepContext:
     )
 
 
-async def run_semgrep_output(top_level_span: trace.Span | None, args: list[str]) -> str:
+async def run_semgrep_output(context: SemgrepContext, args: list[str]) -> str:
     """
     Runs `semgrep` with the given arguments and returns the stdout.
     """
-    process = await run_semgrep_process_sync(top_level_span, args)
+    process = await run_semgrep_process_sync(context.top_level_span, args)
 
     if process.stdout is None or process.stderr is None:
         raise McpError(
