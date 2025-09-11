@@ -11,6 +11,8 @@ from opentelemetry import trace
 
 from semgrep_mcp.models import CodeFile
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
+from semgrep_mcp.utilities.tracing import get_trace_endpoint, tracing_disabled
+from semgrep_mcp.utilities.utils import ensure_semgrep_available, is_hosted
 
 ################################################################################
 # Prelude #
@@ -29,146 +31,6 @@ SEMGREP_EXECUTABLE: str | None = None
 SEMGREP_PATH = os.getenv("SEMGREP_PATH", None)
 
 ################################################################################
-# Helpers #
-################################################################################
-
-
-def is_hosted() -> bool:
-    """
-    Check if the user is using the hosted version of the MCP server.
-    """
-    return os.environ.get("SEMGREP_IS_HOSTED", "false").lower() == "true"
-
-
-################################################################################
-# Finding Semgrep #
-################################################################################
-
-
-# Semgrep utilities
-def find_semgrep_info() -> tuple[str | None, str]:
-    """
-    Dynamically find semgrep in PATH or common installation directories
-    Returns: Path to semgrep executable and version or (None, "unknown") if not found
-    """
-    # Common paths where semgrep might be installed
-    common_paths = [
-        "semgrep",  # Default PATH
-        "/usr/local/bin/semgrep",
-        "/usr/bin/semgrep",
-        "/opt/homebrew/bin/semgrep",  # Homebrew on macOS
-        "/opt/semgrep/bin/semgrep",
-        "/home/linuxbrew/.linuxbrew/bin/semgrep",  # Homebrew on Linux
-        "/snap/bin/semgrep",  # Snap on Linux
-    ]
-
-    if SEMGREP_PATH:
-        common_paths.append(SEMGREP_PATH)
-
-    # Add Windows paths if on Windows
-    if os.name == "nt":
-        app_data = os.environ.get("APPDATA", "")
-        if app_data:
-            common_paths.extend(
-                [
-                    os.path.join(app_data, "Python", "Scripts", "semgrep.exe"),
-                    os.path.join(app_data, "npm", "semgrep.cmd"),
-                ]
-            )
-
-    # Try each path
-    for semgrep_path in common_paths:
-        # For 'semgrep' (without path), check if it's in PATH
-        if semgrep_path == "semgrep":
-            try:
-                process = subprocess.run(
-                    [semgrep_path, "--version"], check=True, capture_output=True, text=True
-                )
-                return semgrep_path, process.stdout.strip()
-            except (subprocess.SubprocessError, FileNotFoundError):
-                continue
-
-        # For absolute paths, check if the file exists before testing
-        if os.path.isabs(semgrep_path):
-            if not os.path.exists(semgrep_path):
-                continue
-
-            # Try executing semgrep at this path
-            try:
-                process = subprocess.run(
-                    [semgrep_path, "--version"], check=True, capture_output=True, text=True
-                )
-                return semgrep_path, process.stdout.strip()
-            except (subprocess.SubprocessError, FileNotFoundError):
-                continue
-
-    return None, "unknown"
-
-
-def find_semgrep_path() -> str | None:
-    """
-    Find the path to the semgrep executable
-
-    Returns:
-        Path to semgrep executable or None if not found
-    """
-    semgrep_path, _ = find_semgrep_info()
-    return semgrep_path
-
-
-def get_semgrep_version() -> str:
-    """
-    Get the version of the semgrep binary.
-    """
-    _, semgrep_version = find_semgrep_info()
-    return semgrep_version
-
-
-async def ensure_semgrep_available() -> str:
-    """
-    Ensures semgrep is available and sets the global path in a thread-safe manner
-
-    Returns:
-        Path to semgrep executable
-
-    Raises:
-        McpError: If semgrep is not installed or not found
-    """
-    global SEMGREP_EXECUTABLE
-
-    # Fast path - check if we already have the path
-    if SEMGREP_EXECUTABLE:
-        return SEMGREP_EXECUTABLE
-
-    # Slow path - acquire lock and find semgrep
-    async with _SEMGREP_LOCK:
-        # Try to find semgrep
-        semgrep_path = find_semgrep_path()
-
-        if not semgrep_path:
-            raise McpError(
-                ErrorData(
-                    code=INTERNAL_ERROR,
-                    message="Semgrep is not installed or not in your PATH. "
-                    "Please install Semgrep manually before using this tool. "
-                    "Installation options: "
-                    "pip install semgrep, "
-                    "macOS: brew install semgrep, "
-                    "Or refer to https://semgrep.dev/docs/getting-started/",
-                )
-            )
-
-        # Store the path for future use
-        SEMGREP_EXECUTABLE = semgrep_path
-        return semgrep_path
-
-
-def set_semgrep_executable(semgrep_path: str) -> None:
-    global SEMGREP_EXECUTABLE
-    SEMGREP_EXECUTABLE = semgrep_path
-
-
-################################################################################
 # Communicating with Semgrep over RPC #
 ################################################################################
 
@@ -177,7 +39,7 @@ class SemgrepContext:
     process: asyncio.subprocess.Process | None
     stdin: asyncio.StreamWriter | None
     stdout: asyncio.StreamReader | None
-    top_level_span: trace.Span
+    top_level_span: trace.Span | None
 
     is_hosted: bool
     pro_engine_available: bool
@@ -185,7 +47,7 @@ class SemgrepContext:
 
     def __init__(
         self,
-        top_level_span: trace.Span,
+        top_level_span: trace.Span | None,
         is_hosted: bool,
         pro_engine_available: bool,
         use_rpc: bool,
@@ -272,7 +134,7 @@ def get_semgrep_env(top_level_span: trace.Span | None) -> dict[str, str]:
     # Just so we get the debug logs for the MCP server
     env = os.environ.copy()
     env["SEMGREP_LOG_SRCS"] = "mcp"
-    if top_level_span:
+    if top_level_span and not tracing_disabled:
         env["SEMGREP_TRACE_PARENT_SPAN_ID"] = trace.format_span_id(
             top_level_span.get_span_context().span_id
         )
@@ -283,19 +145,25 @@ def get_semgrep_env(top_level_span: trace.Span | None) -> dict[str, str]:
     return env
 
 
+async def create_args(args: list[str]) -> list[str]:
+    semgrep_path = await ensure_semgrep_available()
+    _, env_alias = get_trace_endpoint()
+    return [
+        semgrep_path,
+        *args
+        + (["--no-trace"] if tracing_disabled else ["--trace", "--trace-endpoint", env_alias]),
+    ]
+
+
 async def run_semgrep_process_async(
     top_level_span: trace.Span | None,
     args: list[str],
 ) -> asyncio.subprocess.Process:
-    # Ensure semgrep is available
-    semgrep_path = await ensure_semgrep_available()
-
     env = get_semgrep_env(top_level_span)
 
     # Execute semgrep command
     process = await asyncio.create_subprocess_exec(
-        semgrep_path,
-        *args,
+        *await create_args(args),
         stdin=asyncio.subprocess.PIPE,
         stdout=asyncio.subprocess.PIPE,
         # This ensures that stderr makes it through to
@@ -310,14 +178,11 @@ async def run_semgrep_process_sync(
     top_level_span: trace.Span | None,
     args: list[str],
 ) -> subprocess.CompletedProcess[bytes]:
-    # Ensure semgrep is available
-    semgrep_path = await ensure_semgrep_available()
-
     env = get_semgrep_env(top_level_span)
 
     # Execute semgrep command
     process = subprocess.run(
-        [semgrep_path, *args],
+        await create_args(args),
         stdin=subprocess.PIPE,
         capture_output=True,
         env=env,
@@ -325,7 +190,7 @@ async def run_semgrep_process_sync(
     return process
 
 
-async def mk_context(top_level_span: trace.Span) -> SemgrepContext:
+async def mk_context(top_level_span: trace.Span | None) -> SemgrepContext:
     """
     Runs the semgrep daemon (`semgrep mcp`) if:
     - the user has the Pro Engine installed
@@ -361,7 +226,7 @@ async def mk_context(top_level_span: trace.Span) -> SemgrepContext:
         )
     else:
         logging.info("Spawning `semgrep mcp` daemon...")
-        process = await run_semgrep_process_async(top_level_span, ["mcp", "--pro", "--trace"])
+        process = await run_semgrep_process_async(top_level_span, ["mcp", "--pro"])
 
     return SemgrepContext(
         top_level_span=top_level_span,
