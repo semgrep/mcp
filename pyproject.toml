@@ -61,6 +61,7 @@ dev-dependencies = [
     "ruff>=0.11.4",
     "pytest>=8.1.1",
     "pytest-asyncio>=0.23.0",
+    "pytest-env>=1.1.0",
     "tomli>=2.0.1",
     "tomli-w>=1.0.0",
     "pre-commit>=3.0.0",
@@ -125,3 +126,6 @@ addopts = [
     "-v",
     "--tb=short",
 ]
+
+[tool.pytest_env]
+SEMGREP_MCP_DISABLE_TRACING = "true"
