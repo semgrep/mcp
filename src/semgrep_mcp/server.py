@@ -31,7 +31,6 @@ from semgrep_mcp.semgrep import (
     run_semgrep_output,
     run_semgrep_via_rpc,
 )
-from semgrep_mcp.utilities.utils import set_semgrep_executable, get_semgrep_version
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.tracing import (
     attach_metrics,
@@ -40,7 +39,11 @@ from semgrep_mcp.utilities.tracing import (
     start_tracing,
     with_tool_span,
 )
-from semgrep_mcp.utilities.utils import get_semgrep_app_token
+from semgrep_mcp.utilities.utils import (
+    get_semgrep_app_token,
+    get_semgrep_version,
+    set_semgrep_executable,
+)
 from semgrep_mcp.version import __version__
 
 # ---------------------------------------------------------------------------------
