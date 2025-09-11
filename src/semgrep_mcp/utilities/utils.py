@@ -33,7 +33,7 @@ def get_semgrep_app_token() -> str | None:
     user_settings_file = get_user_settings_file()
     if user_settings_file.exists():
         with open(user_settings_file) as f:
-            yaml = YAML(typ='safe', pure=True)
+            yaml = YAML(typ="safe", pure=True)
             settings = yaml.load(f)
             return settings.get("api_token")
 

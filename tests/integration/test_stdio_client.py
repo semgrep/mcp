@@ -35,7 +35,7 @@ async def test_stdio_client():
 
             # Read a resource
             print("Reading resource")
-            content, mime_type = await session.read_resource("semgrep://rule/schema")
+            content, _ = await session.read_resource("semgrep://rule/schema")
 
             # Call a tool
             results = await session.call_tool(

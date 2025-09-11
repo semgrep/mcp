@@ -2,7 +2,7 @@
 repos:
   # Ruff - matches .github/workflows/lint.yml ruff job
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.4
+    rev: v0.13.0
     hooks:
       - id: ruff
         args: [--fix]
