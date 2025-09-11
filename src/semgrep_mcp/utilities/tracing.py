@@ -70,8 +70,15 @@ def get_token_from_user_settings() -> str:
     return yaml_contents.get("api_token", "")
 
 
+def attach_git_metrics(span: trace.Span, git_username: str | None, git_repo: str | None):
+    span.set_attribute("metrics.git_username", git_username if git_username else "unknown")
+    span.set_attribute("metrics.git_repo", git_repo if git_repo else "unknown")
+
+
 def attach_metrics(
     span: trace.Span,
+    git_username: str | None,
+    git_repo: str | None,
     version: str,
     skipped_rules: list[str],
     paths: list[Any],
@@ -79,6 +86,7 @@ def attach_metrics(
     errors: list[dict[str, Any]],
     config: str | None,
 ):
+    attach_git_metrics(span, git_username, git_repo)
     span.set_attribute("metrics.semgrep_version", version)
     span.set_attribute("metrics.num_skipped_rules", len(skipped_rules))
     span.set_attribute("metrics.rule_config", config if config else "default")
@@ -89,9 +97,17 @@ def attach_metrics(
     # us setting up Datadog metrics and not just tracing.
 
 
-def attach_scan_metrics(span: trace.Span, results: SemgrepScanResult, config: str | None):
+def attach_scan_metrics(
+    span: trace.Span,
+    git_username: str | None,
+    git_repo: str | None,
+    results: SemgrepScanResult,
+    config: str | None,
+):
     attach_metrics(
         span,
+        git_username,
+        git_repo,
         results.version,
         results.skipped_rules,
         results.paths["scanned"],
@@ -101,7 +117,10 @@ def attach_scan_metrics(span: trace.Span, results: SemgrepScanResult, config: st
     )
 
 
-def attach_rpc_scan_metrics(span: trace.Span, results: CliOutput):
+def attach_rpc_scan_metrics(
+    span: trace.Span, git_username: str | None, git_repo: str | None, results: CliOutput
+):
+    attach_git_metrics(span, git_username, git_repo)
     span.set_attribute(
         "metrics.semgrep_version", results.version.value if results.version else "unknown"
     )
