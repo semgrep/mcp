@@ -173,7 +173,6 @@ def _print_next_steps(verification_success: bool) -> None:
         print("4. 🔧 Try using the tools in any conversation:")
         print("   • semgrep_scan")
         print("   • semgrep_findings")
-        print("   • security_check")
         print("5. 📊 Check MCP status in Claude Code with: /mcp")
     else:
         print("1. ⚠️  Configuration may not be fully working")
