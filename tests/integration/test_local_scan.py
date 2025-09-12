@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import time
+from pathlib import Path
 from tempfile import NamedTemporaryFile
 
 import pytest
@@ -16,8 +17,6 @@ def streamable_server():
     # Start the streamable-http server
     proc = subprocess.Popen(
         ["python", "src/semgrep_mcp/server.py", "-t", "streamable-http"],
-        # Non hosted!
-        env={"SEMGREP_IS_HOSTED": "false"},
     )
     # Wait briefly to ensure the server starts
     time.sleep(2)
@@ -28,14 +27,16 @@ def streamable_server():
 
 
 @pytest.mark.asyncio
-async def test_streamable_client_smoke(streamable_server):
+async def test_local_scan(streamable_server):
     async with streamablehttp_client(f"{base_url}/mcp") as (read_stream, write_stream, _):
         async with ClientSession(read_stream, write_stream) as session:
             # Initializing session...
             await session.initialize()
             # Session initialized
 
-            with NamedTemporaryFile("w", encoding="utf-8") as tmp:
+            with NamedTemporaryFile(
+                "w", prefix="hello_world", suffix=".py", encoding="utf-8"
+            ) as tmp:
                 tmp.write("def hello(): print('Hello, World!')")
                 tmp.flush()
 
@@ -47,7 +48,7 @@ async def test_streamable_client_smoke(streamable_server):
                     {
                         "code_files": [
                             {
-                                "path": path,
+                                "path": str(Path(path).absolute()),
                             }
                         ]
                     },
@@ -56,5 +57,6 @@ async def test_streamable_client_smoke(streamable_server):
                 assert results is not None
                 content = json.loads(results.content[0].text)  # type: ignore
                 assert isinstance(content, dict)
-                assert content["paths"]["scanned"] == ["hello_world.py"]
+                assert len(content["paths"]["scanned"]) == 1
+                assert content["paths"]["scanned"][0].startswith("hello_world")
                 print(json.dumps(content, indent=2))

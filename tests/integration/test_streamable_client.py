@@ -15,7 +15,7 @@ def streamable_server():
     # Start the streamable-http server
     proc = subprocess.Popen(
         ["python", "src/semgrep_mcp/server.py", "-t", "streamable-http"],
-        env={"SEMGREP_IS_HOSTED": "true"},
+        env={"SEMGREP_IS_HOSTED": "true", **os.environ},
     )
     # Wait briefly to ensure the server starts
     time.sleep(2)

@@ -255,18 +255,17 @@ def validate_local_files(local_files: list[dict[str, str]]) -> list[CodeFile]:
                     )
                 )
             contents = Path(path).read_text()
-            validated_local_files.append(CodeFile(path=path, content=contents))
+            # We need to not use the absolute path here, as there is logic later
+            # that raises, to prevent path traversal.
+            # In reality, the name of the file is pretty immaterial. We only
+            # want the accurate path insofar as we can get the contents (whcih we do here)
+            # and so we can remember what original file it corresponds to.
+            # Taking the name of the file should be enough.
+            validated_local_files.append(CodeFile(path=Path(path).name, content=contents))
     except Exception as e:
         raise McpError(
             ErrorData(code=INVALID_PARAMS, message=f"Invalid local code files format: {e!s}")
         ) from e
-    for file in validated_local_files:
-        if not Path(file.path).is_absolute():
-            raise McpError(
-                ErrorData(
-                    code=INVALID_PARAMS, message="code_files.filename must be a absolute path"
-                )
-            )
 
     return validated_local_files
 
@@ -753,8 +752,6 @@ async def semgrep_scan_cli(
       - scan code files for security vulnerabilities
       - scan code files for other issues
     """
-    # Validate config
-    config = validate_config(config)
 
     temp_dir = None
     try:
@@ -899,7 +896,7 @@ async def semgrep_scan(
     """
     Runs a Semgrep scan locally on provided code files returns the findings in JSON format.
 
-    Files are expected to be in the current paths are absolute paths to the code files.
+    Files are expected to be absolute paths to the code files.
 
     Use this tool when you need to:
       - scan code files for security vulnerabilities

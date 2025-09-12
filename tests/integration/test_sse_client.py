@@ -16,7 +16,8 @@ print(f"MCP_BASE_URL: {base_url}")
 def sse_server():
     # Start the SSE server
     proc = subprocess.Popen(
-        ["python", "src/semgrep_mcp/server.py", "-t", "sse"], env={"SEMGREP_IS_HOSTED": "true"}
+        ["python", "src/semgrep_mcp/server.py", "-t", "sse"],
+        env={"SEMGREP_IS_HOSTED": "true", **os.environ},
     )
     # Wait briefly to ensure the server starts
     time.sleep(5)

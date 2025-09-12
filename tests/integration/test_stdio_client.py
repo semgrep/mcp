@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 from mcp import ClientSession, StdioServerParameters
@@ -11,6 +12,7 @@ server_params = StdioServerParameters(
     env={
         "USE_SEMGREP_RPC": "false",
         "SEMGREP_IS_HOSTED": "true",
+        **os.environ,
     },  # Optional environment variables
 )
 
