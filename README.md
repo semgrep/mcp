@@ -97,7 +97,7 @@ uvx semgrep-mcp # see --help for more options
 Or, run as a [Docker container](https://ghcr.io/semgrep/mcp):
 
 ```bash
-docker run -i --rm ghcr.io/semgrep/mcp -t stdio 
+docker run -i --rm ghcr.io/semgrep/mcp -t stdio
 ```
 
 ### Cursor
@@ -473,7 +473,7 @@ async def main():
                 {
                     "code_files": [
                         {
-                            "filename": "hello_world.py",
+                            "path": "hello_world.py",
                             "content": "def hello(): print('Hello, World!')",
                         }
                     ]
