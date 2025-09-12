@@ -104,7 +104,7 @@ def safe_join(base_dir: str, untrusted_path: str) -> str:
 
     # Ensure untrusted path is not absolute
     # This is soft validation, path traversal is checked later
-    if os.path.isabs(untrusted_path):
+    if Path(untrusted_path).is_absolute():
         raise ValueError("Untrusted path must be relative")
 
     # Join and normalize the untrusted path
@@ -120,7 +120,7 @@ def safe_join(base_dir: str, untrusted_path: str) -> str:
 # Path validation
 def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
     """Validates an absolute path to ensure it's safe to use"""
-    if not os.path.isabs(path_to_validate):
+    if not Path(path_to_validate).is_absolute():
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
@@ -248,7 +248,7 @@ def validate_local_files(local_files: list[dict[str, str]]) -> list[CodeFile]:
         validated_local_files = []
         for file in local_files:
             path = file["path"]
-            if not os.path.isabs(path):
+            if not Path(path).is_absolute():
                 raise McpError(
                     ErrorData(
                         code=INVALID_PARAMS, message="code_files.path must be a absolute path"
@@ -261,7 +261,7 @@ def validate_local_files(local_files: list[dict[str, str]]) -> list[CodeFile]:
             ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
         ) from e
     for file in validated_local_files:
-        if not os.path.isabs(file.path):
+        if not Path(file.path).is_absolute():
             raise McpError(
                 ErrorData(
                     code=INVALID_PARAMS, message="code_files.filename must be a absolute path"
