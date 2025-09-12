@@ -273,7 +273,9 @@ async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> 
         List of CliMatch objects
     """
 
-    files_json = [{"file": data.filename, "content": data.content} for data in data]
+    # TODO: to be honest it's silly for us to wire the contents of the files over RPC
+    # if they exist on the local filesystem, we could just pass the paths
+    files_json = [{"file": data.path, "content": data.content} for data in data]
 
     # ATD serialized value
     resp = await context.send_request("scanFiles", files=files_json)
