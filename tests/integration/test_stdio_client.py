@@ -43,7 +43,7 @@ async def test_stdio_client():
                 {
                     "code_files": [
                         {
-                            "filename": "hello_world.py",
+                            "path": "hello_world.py",
                             "content": "def hello(): print('Hello, World!')",
                         }
                     ]

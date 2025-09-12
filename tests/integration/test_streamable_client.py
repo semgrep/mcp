@@ -36,7 +36,7 @@ async def test_streamable_client_smoke(streamable_server):
                 {
                     "code_files": [
                         {
-                            "filename": "hello_world.py",
+                            "path": "hello_world.py",
                             "content": "def hello(): print('Hello, World!')",
                         }
                     ]

@@ -38,7 +38,7 @@ async def test_sse_client_smoke(sse_server):
                 {
                     "code_files": [
                         {
-                            "filename": "hello_world.py",
+                            "path": "hello_world.py",
                             "content": "def hello(): print('Hello, World!')",
                         }
                     ]

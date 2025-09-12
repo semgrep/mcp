@@ -258,7 +258,7 @@ def validate_local_files(local_files: list[dict[str, str]]) -> list[CodeFile]:
             validated_local_files.append(CodeFile(path=path, content=contents))
     except Exception as e:
         raise McpError(
-            ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
+            ErrorData(code=INVALID_PARAMS, message=f"Invalid local code files format: {e!s}")
         ) from e
     for file in validated_local_files:
         if not Path(file.path).is_absolute():
@@ -294,7 +294,7 @@ def validate_remote_files(code_files: list[dict[str, str]]) -> list[CodeFile]:
         return validated_code_files
     except Exception as e:
         raise McpError(
-            ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
+            ErrorData(code=INVALID_PARAMS, message=f"Invalid remote code files format: {e!s}")
         ) from e
 
 
@@ -740,7 +740,7 @@ async def semgrep_scan_cli(
     ctx: Context,
     code_files: list[CodeFile],
     config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult | CliOutput:
+) -> SemgrepScanResult:
     """
     Runs a Semgrep scan on provided code content and returns the findings in JSON format
 
