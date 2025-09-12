@@ -19,7 +19,7 @@ def streamable_server():
         ["python", "src/semgrep_mcp/server.py", "-t", "streamable-http"],
     )
     # Wait briefly to ensure the server starts
-    time.sleep(2)
+    time.sleep(5)
     yield
     # Teardown: terminate the server
     proc.terminate()
