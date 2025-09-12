@@ -753,6 +753,9 @@ async def semgrep_scan_cli(
       - scan code files for other issues
     """
 
+    # Validate config
+    config = validate_config(config)
+
     temp_dir = None
     try:
         # Create temporary files from code content
@@ -908,9 +911,6 @@ async def semgrep_scan(
     # the server is remotely hosted or not.
     # If the server is local, only this tool will be available, and not the
     # `semgrep_scan_remote` tool.
-
-    # Validate config
-    config = validate_config(config)
 
     validated_local_files = validate_local_files(code_files)
 
