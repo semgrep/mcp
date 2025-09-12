@@ -10,9 +10,9 @@ def test_create_temp_files_from_code_content():
     """Test that create_temp_files_from_code_content correctly creates temp files with content"""
     # Define test code files
     code_files = [
-        CodeFile(filename="test_file.py", content="print('Hello, world!')"),
-        CodeFile(filename="nested/path/test_file.js", content="console.log('Hello, world!');"),
-        CodeFile(filename="special chars/file with spaces.txt", content="Hello, world!"),
+        CodeFile(path="test_file.py", content="print('Hello, world!')"),
+        CodeFile(path="nested/path/test_file.js", content="console.log('Hello, world!');"),
+        CodeFile(path="special chars/file with spaces.txt", content="Hello, world!"),
     ]
 
     # Call the function
@@ -26,7 +26,7 @@ def test_create_temp_files_from_code_content():
 
         # Check if files were created with correct content
         for code_file in code_files:
-            file_path = os.path.join(temp_dir, code_file.filename)
+            file_path = os.path.join(temp_dir, code_file.path)
             assert os.path.exists(file_path)
             with open(file_path) as f:
                 content = f.read()
@@ -71,8 +71,8 @@ def test_create_temp_files_from_code_content_empty_list():
 def test_create_temp_files_from_code_content_empty_filename():
     """Test that create_temp_files_from_code_content handles empty filenames"""
     code_files = [
-        CodeFile(filename="", content="This content should be skipped"),
-        CodeFile(filename="valid_file.txt", content="This is valid content"),
+        CodeFile(path="", content="This content should be skipped"),
+        CodeFile(path="valid_file.txt", content="This is valid content"),
     ]
 
     temp_dir = None
@@ -111,9 +111,9 @@ def test_create_temp_files_from_code_content_path_traversal():
     """Test that create_temp_files_from_code_content prevents path traversal"""
     # Define test code files with path traversal attempts
     code_files = [
-        CodeFile(filename="../attempt_to_write_outside.txt", content="This should fail"),
-        CodeFile(filename="subdir/../../../etc/passwd", content="This should fail too"),
-        CodeFile(filename="/absolute/path/file.txt", content="This should fail as well"),
+        CodeFile(path="../attempt_to_write_outside.txt", content="This should fail"),
+        CodeFile(path="subdir/../../../etc/passwd", content="This should fail too"),
+        CodeFile(path="/absolute/path/file.txt", content="This should fail as well"),
     ]
 
     # The function should raise a ValueError for path traversal attempts

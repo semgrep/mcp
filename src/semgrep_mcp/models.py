@@ -4,12 +4,13 @@ from typing import Any
 from pydantic import BaseModel, Field, HttpUrl
 
 
-class LocalCodeFile(BaseModel):
-    path: str = Field(description="Absolute path to be scanned locally by Semgrep.")
-
-
 class CodeFile(BaseModel):
-    filename: str = Field(description="Relative path to the code file")
+    # This "path" is mostly for bookkeeping purposes.
+    # Depending on whether the server is hosted or not, this path might
+    # not actually exist on the filesystem.
+    path: str = Field(description="Path of the code file")
+    # The `content` field will be filled in either by the LLM (in the remote scanning case)
+    # or gleaned from the filesystem (in the local scanning case).
     content: str = Field(description="Content of the code file")
 
 
