@@ -880,6 +880,74 @@ async def semgrep_scan_local(
 
 @mcp.tool()
 @with_tool_span()
+async def security_check(
+    ctx: Context,
+    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
+) -> str:
+    """
+    Runs a fast security check on code and returns any issues found.
+
+    Use this tool when you need to:
+      - scan code for security vulnerabilities
+      - verify that code is secure
+      - double check that code is secure before committing
+      - get a second opinion on code security
+
+    If there are any issues found, you **MUST** fix them or offer to fix them and
+    explain to the user why it's important to fix.
+    If there are no issues, you can be reasonably confident that the code is secure.
+    """
+    # Validate code_files
+    validated_code_files = validate_code_files(code_files)
+
+    no_findings_message = """No security issues found in the code!"""
+    security_issues_found_message_template = """{num_issues} security issues found in the code.
+
+Here are the details of the security issues found:
+
+<security-issues>
+    {details}
+</security-issues>
+"""
+    temp_dir = None
+    try:
+        # Create temporary files from code content
+        temp_dir = create_temp_files_from_code_content(validated_code_files)
+        args = get_semgrep_scan_args(temp_dir)
+        output = await run_semgrep_output(top_level_span=None, args=args)
+        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+
+        attach_scan_metrics(get_current_span(), results, None)
+
+        remove_temp_dir_from_results(results, temp_dir)
+
+        if len(results.results) > 0:
+            return security_issues_found_message_template.format(
+                num_issues=len(results.results),
+                details=results.model_dump_json(indent=2),
+            )
+        else:
+            return no_findings_message
+
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+        ) from e
+
+    finally:
+        if temp_dir:
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@mcp.tool()
+@with_tool_span()
 async def get_abstract_syntax_tree(
     ctx: Context,
     code: str = Field(description="The code to get the AST for"),
@@ -941,6 +1009,30 @@ async def get_abstract_syntax_tree(
 # ---------------------------------------------------------------------------------
 # MCP Prompts
 # ---------------------------------------------------------------------------------
+
+
+@mcp.prompt()
+def setup_semgrep_mcp():
+    prompt_template = """
+    You are Cursor automations. Do the following in order and confirm each step:
+
+    1) Install and authenticate Semgrep:
+    - Run non-interactively: `semgrep login && semgrep install-semgrep-pro || true`
+
+    2) Add a Cursor rule file at `.cursor/rules/semgrep.mdc` with the following exact content:
+    ---
+    alwaysApply: true
+    ---
+    - Always look first to any semgrep mcp servers for code security needs
+    - Whenever you generate code or commands, you MUST first ensure safety by scanning the
+    content with the semgrep_scan tool
+
+    3) Report back:
+    - Confirm the `.cursor/rules/semgrep.mdc` file exists with the specified content.
+    - Confirm Semgrep login/install status by running `semgrep --pro --version`.
+
+    """
+    return prompt_template
 
 
 @mcp.prompt()
@@ -1068,6 +1160,7 @@ TOOL_DISABLE_ENV_VARS = {
     "SEMGREP_SCAN_WITH_CUSTOM_RULE_DISABLED": "semgrep_scan_with_custom_rule",
     "SEMGREP_SCAN_DISABLED": "semgrep_scan",
     "SEMGREP_SCAN_LOCAL_DISABLED": "semgrep_scan_local",
+    "SECURITY_CHECK_DISABLED": "security_check",
     "GET_ABSTRACT_SYNTAX_TREE_DISABLED": "get_abstract_syntax_tree",
 }
 

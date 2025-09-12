@@ -228,7 +228,7 @@ async def mk_context(top_level_span: trace.Span | None) -> SemgrepContext:
         logging.warning("No SEMGREP_APP_TOKEN found, not running `semgrep mcp` daemon...")
     else:
         logging.info("Spawning `semgrep mcp` daemon...")
-        process = await run_semgrep_process_async(top_level_span, ["mcp", "--pro"])
+        process = await run_semgrep_process_async(top_level_span, ["mcp", "--pro", "--debug"])
 
     return SemgrepContext(
         top_level_span=top_level_span,
