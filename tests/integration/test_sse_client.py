@@ -48,7 +48,6 @@ async def test_sse_client_smoke(sse_server):
             )
             # We have results!
             assert results is not None
-            print("results are", results)
             content = json.loads(results.content[0].text)
             assert isinstance(content, dict)
             assert content["paths"]["scanned"] == ["hello_world.py"]
