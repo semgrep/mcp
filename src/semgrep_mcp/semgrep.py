@@ -12,7 +12,7 @@ from opentelemetry import trace
 from semgrep_mcp.models import CodeFile
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.tracing import get_trace_endpoint, tracing_disabled
-from semgrep_mcp.utilities.utils import ensure_semgrep_available, is_hosted
+from semgrep_mcp.utilities.utils import ensure_semgrep_available, get_semgrep_app_token, is_hosted
 
 ################################################################################
 # Prelude #
@@ -224,6 +224,8 @@ async def mk_context(top_level_span: trace.Span | None) -> SemgrepContext:
             User is using the hosted version of the MCP server, not running `semgrep mcp` daemon...
             """
         )
+    elif not get_semgrep_app_token():
+        logging.warning("No SEMGREP_APP_TOKEN found, not running `semgrep mcp` daemon...")
     else:
         logging.info("Spawning `semgrep mcp` daemon...")
         process = await run_semgrep_process_async(top_level_span, ["mcp", "--pro"])
