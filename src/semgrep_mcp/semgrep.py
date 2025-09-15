@@ -275,8 +275,32 @@ async def run_semgrep_via_rpc(context: SemgrepContext, data: list[CodeFile]) -> 
         List of CliMatch objects
     """
 
+    def get_git_info():
+        def run_git_command(args):
+            try:
+                result = subprocess.run(
+                    ["git", *args],
+                    capture_output=True,
+                    check=True,
+                    text=True,
+                )
+                return result.stdout.strip()
+            except Exception:
+                return "not found"
+
+        username = run_git_command(["config", "user.name"])
+        repo = run_git_command(["rev-parse", "--show-toplevel"])
+        if repo != "not found":
+            repo = repo.split("/")[-1]
+        branch = run_git_command(["rev-parse", "--abbrev-ref", "HEAD"])
+        return username, repo, branch
+
+    git_username, git_repo, git_branch = get_git_info()
+    logging.warning(f"git info: {git_username}, {git_repo}, {git_branch}")
+
     # TODO: to be honest it's silly for us to wire the contents of the files over RPC
     # if they exist on the local filesystem, we could just pass the paths
+
     files_json = [{"file": data.path, "content": data.content} for data in data]
 
     # ATD serialized value
