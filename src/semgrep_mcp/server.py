@@ -24,7 +24,7 @@ from pydantic import Field, ValidationError
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from semgrep_mcp.models import CodeFile, Finding, LocalCodeFile, SemgrepScanResult
+from semgrep_mcp.models import CodeFile, Finding, SemgrepScanResult
 from semgrep_mcp.semgrep import (
     SemgrepContext,
     mk_context,
@@ -33,7 +33,6 @@ from semgrep_mcp.semgrep import (
 )
 from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.tracing import (
-    attach_metrics,
     attach_rpc_scan_metrics,
     attach_scan_metrics,
     start_tracing,
@@ -42,6 +41,7 @@ from semgrep_mcp.utilities.tracing import (
 from semgrep_mcp.utilities.utils import (
     get_semgrep_app_token,
     get_semgrep_version,
+    is_hosted,
     set_semgrep_executable,
 )
 from semgrep_mcp.version import __version__
@@ -54,7 +54,7 @@ SEMGREP_API_URL = f"{SEMGREP_URL}/api"
 SEMGREP_API_VERSION = "v1"
 
 # Field definitions for function parameters
-CODE_FILES_FIELD = Field(description="List of dictionaries with 'filename' and 'content' keys")
+REMOTE_CODE_FILES_FIELD = Field(description="List of dictionaries with 'path' and 'content' keys")
 LOCAL_CODE_FILES_FIELD = Field(
     description=("List of dictionaries with 'path' pointing to the absolute path of the code file")
 )
@@ -104,7 +104,7 @@ def safe_join(base_dir: str, untrusted_path: str) -> str:
 
     # Ensure untrusted path is not absolute
     # This is soft validation, path traversal is checked later
-    if os.path.isabs(untrusted_path):
+    if Path(untrusted_path).is_absolute():
         raise ValueError("Untrusted path must be relative")
 
     # Join and normalize the untrusted path
@@ -120,7 +120,7 @@ def safe_join(base_dir: str, untrusted_path: str) -> str:
 # Path validation
 def validate_absolute_path(path_to_validate: str, param_name: str) -> str:
     """Validates an absolute path to ensure it's safe to use"""
-    if not os.path.isabs(path_to_validate):
+    if not Path(path_to_validate).is_absolute():
         raise McpError(
             ErrorData(
                 code=INVALID_PARAMS,
@@ -174,7 +174,7 @@ def create_temp_files_from_code_content(code_files: list[CodeFile]) -> str:
 
         # Create files in the temporary directory
         for file_info in code_files:
-            filename = file_info.filename
+            filename = file_info.path
             if not filename:
                 continue
 
@@ -227,12 +227,12 @@ def get_semgrep_scan_args(temp_dir: str, config: str | None = None) -> list[str]
     return args
 
 
-def validate_local_files(local_files: list[dict[str, str]]) -> list[LocalCodeFile]:
+def validate_local_files(local_files: list[dict[str, str]]) -> list[CodeFile]:
     """
     Validates the local_files parameter for semgrep scan using Pydantic validation
 
     Args:
-        local_files: List of LocalCodeFile objects
+        local_files: List of singleton dictionaries with a "path" key
 
     Raises:
         McpError: If validation fails
@@ -245,28 +245,37 @@ def validate_local_files(local_files: list[dict[str, str]]) -> list[LocalCodeFil
         )
     try:
         # Pydantic will automatically validate each item in the list
-        validated_local_files = [LocalCodeFile.model_validate(file) for file in local_files]
+        validated_local_files = []
+        for file in local_files:
+            path = file["path"]
+            if not Path(path).is_absolute():
+                raise McpError(
+                    ErrorData(
+                        code=INVALID_PARAMS, message="code_files.path must be a absolute path"
+                    )
+                )
+            contents = Path(path).read_text()
+            # We need to not use the absolute path here, as there is logic later
+            # that raises, to prevent path traversal.
+            # In reality, the name of the file is pretty immaterial. We only
+            # want the accurate path insofar as we can get the contents (whcih we do here)
+            # and so we can remember what original file it corresponds to.
+            # Taking the name of the file should be enough.
+            validated_local_files.append(CodeFile(path=Path(path).name, content=contents))
     except Exception as e:
         raise McpError(
-            ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
+            ErrorData(code=INVALID_PARAMS, message=f"Invalid local code files format: {e!s}")
         ) from e
-    for file in validated_local_files:
-        if not os.path.isabs(file.path):
-            raise McpError(
-                ErrorData(
-                    code=INVALID_PARAMS, message="code_files.filename must be a absolute path"
-                )
-            )
 
     return validated_local_files
 
 
-def validate_code_files(code_files: list[dict[str, str]]) -> list[CodeFile]:
+def validate_remote_files(code_files: list[dict[str, str]]) -> list[CodeFile]:
     """
     Validates the code_files parameter for semgrep scan using Pydantic validation
 
     Args:
-        code_files: List of CodeFile objects
+        code_files: List of dictionaries with a "path" and "content" key
 
     Raises:
         McpError: If validation fails
@@ -280,19 +289,12 @@ def validate_code_files(code_files: list[dict[str, str]]) -> list[CodeFile]:
     try:
         # Pydantic will automatically validate each item in the list
         validated_code_files = [CodeFile.model_validate(file) for file in code_files]
+
+        return validated_code_files
     except Exception as e:
         raise McpError(
-            ErrorData(code=INVALID_PARAMS, message=f"Invalid code files format: {e!s}")
+            ErrorData(code=INVALID_PARAMS, message=f"Invalid remote code files format: {e!s}")
         ) from e
-    for file in validated_code_files:
-        if os.path.isabs(file.filename):
-            raise McpError(
-                ErrorData(
-                    code=INVALID_PARAMS, message="code_files.filename must be a relative path"
-                )
-            )
-
-    return validated_code_files
 
 
 def remove_temp_dir_from_results(results: SemgrepScanResult, temp_dir: str) -> None:
@@ -618,7 +620,7 @@ async def semgrep_findings(
 @with_tool_span()
 async def semgrep_scan_with_custom_rule(
     ctx: Context,
-    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
+    code_files: list[dict[str, str]] = REMOTE_CODE_FILES_FIELD,
     rule: str = RULE_FIELD,
 ) -> SemgrepScanResult:
     """
@@ -630,7 +632,7 @@ async def semgrep_scan_with_custom_rule(
       - scan code files for specific issue not covered by the default Semgrep rules
     """
     # Validate code_files
-    validated_code_files = validate_code_files(code_files)
+    validated_code_files = validate_remote_files(code_files)
     temp_dir = None
     try:
         # Create temporary files from code content
@@ -648,217 +650,6 @@ async def semgrep_scan_with_custom_rule(
         attach_scan_metrics(get_current_span(), results, "custom")
 
         remove_temp_dir_from_results(results, temp_dir)
-        return results
-
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
-
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-@with_tool_span()
-async def semgrep_scan_cli(
-    ctx: Context,
-    code_files: list[CodeFile],
-    config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult | CliOutput:
-    """
-    Runs a Semgrep scan on provided code content and returns the findings in JSON format
-
-    Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
-    CLI scan, or an RPC-based scan.
-
-    Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
-
-    Use this tool when you need to:
-      - scan code files for security vulnerabilities
-      - scan code files for other issues
-    """
-    # Validate config
-    config = validate_config(config)
-
-    temp_dir = None
-    try:
-        # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(code_files)
-        args = get_semgrep_scan_args(temp_dir, config)
-        output = await run_semgrep_output(top_level_span=None, args=args)
-        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
-        remove_temp_dir_from_results(results, temp_dir)
-
-        attach_scan_metrics(get_current_span(), results, config)
-
-        return results
-
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
-
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-@with_tool_span()
-async def semgrep_scan_rpc(
-    ctx: Context,
-    code_files: list[CodeFile],
-) -> CliOutput:
-    """
-    Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
-
-    This should run much faster than the comparative `semgrep_scan` tool.
-    """
-
-    temp_dir = None
-    try:
-        # TODO: perhaps should return more interpretable results?
-        context: SemgrepContext = ctx.request_context.lifespan_context
-        cli_output = await run_semgrep_via_rpc(context, code_files)
-
-        attach_rpc_scan_metrics(get_current_span(), cli_output)
-
-        return cli_output
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
-
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-@mcp.tool()
-@with_tool_span()
-async def semgrep_scan(
-    ctx: Context,
-    code_files: list[dict[str, str]] = CODE_FILES_FIELD,
-    # TODO: currently only for CLI-based scans
-    config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult | CliOutput:
-    """
-    Runs a Semgrep scan on provided code content and returns the findings in JSON format
-
-    Use this tool when you need to:
-      - scan code files for security vulnerabilities
-      - scan code files for other issues
-    """
-
-    # Implementer's note:
-    # Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
-    # CLI scan, or an RPC-based scan.
-    # Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
-    # I put this here, in a comment, so the MCP doesn't need to be aware
-    # of these differences.
-
-    validated_code_files = validate_code_files(code_files)
-
-    context: SemgrepContext = ctx.request_context.lifespan_context
-
-    paths = [cf.filename for cf in validated_code_files]
-
-    if context.process is not None:
-        if config is not None:
-            # This should hopefully just cause the agent to call us back with
-            # the correct parameters.
-            raise McpError(
-                ErrorData(
-                    code=INVALID_PARAMS,
-                    message="""
-                      `config` is not supported when using the RPC-based scan.
-                      Try calling again without that parameter set?
-                    """,
-                )
-            )
-
-        logging.info(f"Running RPC-based scan on paths: {paths}")
-        return await semgrep_scan_rpc(ctx, validated_code_files)
-    else:
-        logging.info(f"Running CLI-based scan on paths: {paths}")
-        return await semgrep_scan_cli(ctx, validated_code_files, config)
-
-
-@mcp.tool()
-@with_tool_span()
-async def semgrep_scan_local(
-    ctx: Context,
-    code_files: list[dict[str, str]] = LOCAL_CODE_FILES_FIELD,
-    config: str | None = CONFIG_FIELD,
-) -> list[SemgrepScanResult]:
-    """
-    Runs a Semgrep scan locally on provided code files returns the findings in JSON format.
-
-    Files are expected to be in the current paths are absolute paths to the code files.
-
-    Use this tool when you need to:
-      - scan code files for security vulnerabilities
-      - scan code files for other issues
-    """
-    import os
-
-    if not os.environ.get("SEMGREP_ALLOW_LOCAL_SCAN"):
-        raise McpError(
-            ErrorData(
-                code=INVALID_PARAMS,
-                message=(
-                    "Local Semgrep scans are not allowed unless SEMGREP_ALLOW_LOCAL_SCAN is set"
-                ),
-            )
-        )
-    # Validate config
-    config = validate_config(config)
-
-    validated_local_files = validate_local_files(code_files)
-
-    temp_dir = None
-    try:
-        results, skipped_rules, scanned_paths, findings, errors = [], [], [], [], []
-        for cf in validated_local_files:
-            args = get_semgrep_scan_args(cf.path, config)
-            output = await run_semgrep_output(top_level_span=None, args=args)
-            result: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
-            results.append(result)
-            skipped_rules.extend(result.skipped_rules)
-            scanned_paths.extend(result.paths["scanned"])
-            findings.extend(result.results)
-            errors.extend(result.errors)
-
-        attach_metrics(
-            get_current_span(),
-            results[0].version,
-            skipped_rules,
-            scanned_paths,
-            findings,
-            errors,
-            config,
-        )
         return results
 
     except McpError as e:
@@ -936,6 +727,194 @@ async def get_abstract_syntax_tree(
         if temp_dir:
             # Clean up temporary files
             shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------------
+# Scanning tools
+# ---------------------------------------------------------------------------------
+
+
+@with_tool_span()
+async def semgrep_scan_cli(
+    ctx: Context,
+    code_files: list[CodeFile],
+    config: str | None = CONFIG_FIELD,
+) -> SemgrepScanResult:
+    """
+    Runs a Semgrep scan on provided code content and returns the findings in JSON format
+
+    Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
+    CLI scan, or an RPC-based scan.
+
+    Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
+
+    Use this tool when you need to:
+      - scan code files for security vulnerabilities
+      - scan code files for other issues
+    """
+
+    # Validate config
+    config = validate_config(config)
+
+    temp_dir = None
+    try:
+        # Create temporary files from code content
+        temp_dir = create_temp_files_from_code_content(code_files)
+        args = get_semgrep_scan_args(temp_dir, config)
+        output = await run_semgrep_output(top_level_span=None, args=args)
+        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
+        remove_temp_dir_from_results(results, temp_dir)
+
+        attach_scan_metrics(get_current_span(), results, config)
+
+        return results
+
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+        ) from e
+
+    finally:
+        if temp_dir:
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@with_tool_span()
+async def semgrep_scan_rpc(
+    ctx: Context,
+    code_files: list[CodeFile],
+) -> CliOutput:
+    """
+    Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
+
+    This should run much faster than the comparative `semgrep_scan` tool.
+    """
+
+    temp_dir = None
+    try:
+        # TODO: perhaps should return more interpretable results?
+        context: SemgrepContext = ctx.request_context.lifespan_context
+        cli_output = await run_semgrep_via_rpc(context, code_files)
+
+        attach_rpc_scan_metrics(get_current_span(), cli_output)
+
+        return cli_output
+    except McpError as e:
+        raise e
+    except ValidationError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
+        ) from e
+
+    finally:
+        if temp_dir:
+            # Clean up temporary files
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+async def semgrep_scan_core(
+    ctx: Context,
+    code_files: list[CodeFile],
+    config: str | None = CONFIG_FIELD,
+) -> SemgrepScanResult | CliOutput:
+    """
+    Runs a Semgrep scan on provided CodeFile objects and returns the findings in JSON format
+
+    Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
+    CLI scan, or an RPC-based scan.
+
+    Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
+    """
+
+    context: SemgrepContext = ctx.request_context.lifespan_context
+
+    paths = [cf.path for cf in code_files]
+
+    if context.process is not None:
+        if config is not None:
+            # This should hopefully just cause the agent to call us back with
+            # the correct parameters.
+            raise McpError(
+                ErrorData(
+                    code=INVALID_PARAMS,
+                    message="""
+                    `config` is not supported when using the RPC-based scan.
+                    Try calling again without that parameter set?
+                  """,
+                )
+            )
+
+        logging.info(f"Running RPC-based scan on paths: {paths}")
+        return await semgrep_scan_rpc(ctx, code_files)
+    else:
+        logging.info(f"Running CLI-based scan on paths: {paths}")
+        return await semgrep_scan_cli(ctx, code_files, config)
+
+
+@mcp.tool()
+@with_tool_span()
+async def semgrep_scan_remote(
+    ctx: Context,
+    code_files: list[dict[str, str]] = REMOTE_CODE_FILES_FIELD,
+    # TODO: currently only for CLI-based scans
+    config: str | None = CONFIG_FIELD,
+) -> SemgrepScanResult | CliOutput:
+    """
+    Runs a Semgrep scan on provided code content and returns the findings in JSON format
+
+    Use this tool when you need to:
+      - scan code files for security vulnerabilities
+      - scan code files for other issues
+    """
+
+    # Implementer's note:
+    # This is one possible entry point for regular scanning, depending on whether
+    # the server is remotely hosted or not.
+    # If the server is hosted, only this tool will be available, and not the
+    # `semgrep_scan` tool.
+
+    validated_code_files = validate_remote_files(code_files)
+
+    return await semgrep_scan_core(ctx, validated_code_files, config)
+
+
+@mcp.tool()
+@with_tool_span()
+async def semgrep_scan(
+    ctx: Context,
+    code_files: list[dict[str, str]] = LOCAL_CODE_FILES_FIELD,
+    config: str | None = CONFIG_FIELD,
+) -> SemgrepScanResult | CliOutput:
+    """
+    Runs a Semgrep scan locally on provided code files returns the findings in JSON format.
+
+    Files are expected to be absolute paths to the code files.
+
+    Use this tool when you need to:
+      - scan code files for security vulnerabilities
+      - scan code files for other issues
+    """
+
+    # Implementer's note:
+    # This is one possible entry point for regular scanning, depending on whether
+    # the server is remotely hosted or not.
+    # If the server is local, only this tool will be available, and not the
+    # `semgrep_scan_remote` tool.
+
+    validated_local_files = validate_local_files(code_files)
+
+    return await semgrep_scan_core(ctx, validated_local_files, config)
 
 
 # ---------------------------------------------------------------------------------
@@ -1094,7 +1073,7 @@ TOOL_DISABLE_ENV_VARS = {
     "SEMGREP_FINDINGS_DISABLED": "semgrep_findings",
     "SEMGREP_SCAN_WITH_CUSTOM_RULE_DISABLED": "semgrep_scan_with_custom_rule",
     "SEMGREP_SCAN_DISABLED": "semgrep_scan",
-    "SEMGREP_SCAN_LOCAL_DISABLED": "semgrep_scan_local",
+    "SEMGREP_SCAN_REMOTE_DISABLED": "semgrep_scan_remote",
     "GET_ABSTRACT_SYNTAX_TREE_DISABLED": "get_abstract_syntax_tree",
 }
 
@@ -1108,6 +1087,11 @@ def deregister_tools() -> None:
             # we'll just mutate the internal `_tools`, because this language does
             # not stop us from doing so
             del mcp._tool_manager._tools[tool_name]
+
+    if is_hosted():
+        del mcp._tool_manager._tools["semgrep_scan"]
+    else:
+        del mcp._tool_manager._tools["semgrep_scan_remote"]
 
 
 # ---------------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import json
+import os
 
 import pytest
 from mcp import ClientSession, StdioServerParameters
@@ -8,7 +9,11 @@ from mcp.client.stdio import stdio_client
 server_params = StdioServerParameters(
     command="python",  # Executable
     args=["src/semgrep_mcp/server.py"],  # Optional command line arguments
-    env={"USE_SEMGREP_RPC": "false"},  # Optional environment variables
+    env={
+        "USE_SEMGREP_RPC": "false",
+        "SEMGREP_IS_HOSTED": "true",
+        **os.environ,
+    },  # Optional environment variables
 )
 
 
@@ -39,11 +44,11 @@ async def test_stdio_client():
 
             # Call a tool
             results = await session.call_tool(
-                "semgrep_scan",
+                "semgrep_scan_remote",
                 {
                     "code_files": [
                         {
-                            "filename": "hello_world.py",
+                            "path": "hello_world.py",
                             "content": "def hello(): print('Hello, World!')",
                         }
                     ]

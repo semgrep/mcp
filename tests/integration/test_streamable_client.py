@@ -13,9 +13,12 @@ base_url = os.getenv("MCP_BASE_URL", "http://127.0.0.1:8000")
 @pytest.fixture(scope="module")
 def streamable_server():
     # Start the streamable-http server
-    proc = subprocess.Popen(["python", "src/semgrep_mcp/server.py", "-t", "streamable-http"])
+    proc = subprocess.Popen(
+        ["python", "src/semgrep_mcp/server.py", "-t", "streamable-http"],
+        env={"SEMGREP_IS_HOSTED": "true", **os.environ},
+    )
     # Wait briefly to ensure the server starts
-    time.sleep(2)
+    time.sleep(5)
     yield
     # Teardown: terminate the server
     proc.terminate()
@@ -32,11 +35,11 @@ async def test_streamable_client_smoke(streamable_server):
 
             # Scan code for security issues
             results = await session.call_tool(
-                "semgrep_scan",
+                "semgrep_scan_remote",
                 {
                     "code_files": [
                         {
-                            "filename": "hello_world.py",
+                            "path": "hello_world.py",
                             "content": "def hello(): print('Hello, World!')",
                         }
                     ]
