@@ -33,7 +33,7 @@
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-uv-24bfa5?style=flat-square&logo=githubcopilot&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22uvx%22%2C%22args%22%3A%5B%22semgrep-mcp%22%5D%7D&quality=insiders)
 [![Install in VS Code Insiders](https://img.shields.io/badge/VS_Code_Insiders-docker-24bfa5?style=flat-square&logo=githubcopilot&logoColor=white)](https://insiders.vscode.dev/redirect/mcp/install?name=semgrep&config=%7B%22command%22%3A%22docker%22%2C%22args%22%3A%5B%22run%22%2C%20%22-i%22%2C%20%22--rm%22%2C%20%22ghcr.io%2Fsemgrep%2Fmcp%22%2C%20%22-t%22%2C%20%22stdio%22%5D%7D&quality=insiders)
 
-### **The Semgrep MCP server has been moved from a standalone repo to the [main `semgrep` repository!](https://github.com/semgrep/semgrep).**
+### **⚠️ The Semgrep MCP server has been moved from a standalone repo to the [main `semgrep` repository!](https://github.com/semgrep/semgrep) ⚠️**
 **This repository has been deprecated, and further updates to the Semgrep MCP server will be made via the official `semgrep` binary.**
 
 
