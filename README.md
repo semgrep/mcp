@@ -1,3 +1,6 @@
+## **⚠️ The Semgrep MCP server has been moved from a standalone repo to the [main `semgrep` repository!](https://github.com/semgrep/semgrep) ⚠️**
+**This repository has been deprecated, and further updates to the Semgrep MCP server will be made via the official `semgrep` binary.**
+
 <p align="center">
   <a href="https://semgrep.dev">
     <picture>
