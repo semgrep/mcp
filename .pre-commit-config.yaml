@@ -30,14 +30,3 @@ repos:
         types: [python]
         pass_filenames: false
         args: [run, pytest, tests/unit/, --doctest-modules]
-
-  # Pytest integration tests - matches .github/workflows/test.yml integration-tests job
-  - repo: local
-    hooks:
-      - id: pytest-integration
-        name: pytest integration tests
-        entry: uv
-        language: system
-        types: [python]
-        pass_filenames: false
-        args: [run, pytest, tests/integration/, --doctest-modules]

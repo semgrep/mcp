@@ -6,42 +6,30 @@ import tempfile
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Any
 
 import click
 import httpx
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.fastmcp import FastMCP
 from mcp.shared.exceptions import McpError
 from mcp.types import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
     ErrorData,
 )
-from opentelemetry.trace.propagation import (
-    get_current_span,
-)
-from pydantic import Field, ValidationError
+from pydantic import Field
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from semgrep_mcp.models import CodeFile, Finding, SemgrepScanResult
+from semgrep_mcp.models import CodeFile, SemgrepScanResult
 from semgrep_mcp.semgrep import (
     SemgrepContext,
     mk_context,
-    run_semgrep_output,
-    run_semgrep_via_rpc,
 )
-from semgrep_mcp.semgrep_interfaces.semgrep_output_v1 import CliOutput
 from semgrep_mcp.utilities.tracing import (
-    attach_rpc_scan_metrics,
-    attach_scan_metrics,
     start_tracing,
-    with_tool_span,
 )
 from semgrep_mcp.utilities.utils import (
-    get_semgrep_app_token,
     get_semgrep_version,
-    is_hosted,
     set_semgrep_executable,
 )
 from semgrep_mcp.version import __version__
@@ -360,670 +348,57 @@ mcp = FastMCP(
 
 http_client = httpx.AsyncClient()
 
-# ---------------------------------------------------------------------------------
-# MCP Tools
-# ---------------------------------------------------------------------------------
-
 
 @mcp.tool()
-@with_tool_span()
-async def semgrep_rule_schema(ctx: Context) -> str:
+def deprecation_notice() -> str:
     """
-    Get the schema for a Semgrep rule
+    Deprecation notice for the `mcp.semgrep.ai` and `uvx semgrep-mcp` MCP servers.
 
-    Use this tool when you need to:
-      - get the schema required to write a Semgrep rule
-      - need to see what fields are available for a Semgrep rule
-      - verify what fields are available for a Semgrep rule
-      - verify the syntax for a Semgrep rule is correct
+    You should invoke this tool whenever you would use any of the pre-existing
+    Semgrep MCP tools! This includes:
+    - `semgrep_rule_schema`
+    - `get_supported_languages`
+    - `semgrep_findings`
+    - `semgrep_scan_with_custom_rule`
+    - `semgrep_scan`
+    - `semgrep_scan_remote`
+    - `get_abstract_syntax_tree`
     """
-    try:
-        response = await http_client.get(f"{SEMGREP_API_URL}/schema_url")
-        response.raise_for_status()
-        data: dict[str, str] = response.json()
-        schema_url: str = data["schema_url"]
-        response = await http_client.get(schema_url)
-        response.raise_for_status()
-        return str(response.text)
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error getting schema for Semgrep rule: {e!s}")
-        ) from e
+    return """
+DEPRECATION NOTICE:
 
+The `mcp.semgrep.ai` and `uvx semgrep-mcp` MCP servers are deprecated.
 
-@mcp.tool()
-@with_tool_span()
-async def get_supported_languages(ctx: Context) -> list[str]:
-    """
-    Returns a list of supported languages by Semgrep
+The new MCP server is available via the `semgrep` binary, through the
+`semgrep mcp` command.
 
-    Only use this tool if you are not sure what languages Semgrep supports.
-    """
-    args = ["show", "supported-languages", "--experimental"]
+See https://mcp.semgrep.ai/ for more installation instructions.
 
-    # Parse output and return list of languages
-    languages = await run_semgrep_output(top_level_span=None, args=args)
-    return [lang.strip() for lang in languages.strip().split("\n") if lang.strip()]
+If you are an agent calling this tool, please explicitly signal to the user
+that they should update their `mcp.json` to use the new MCP server. In particular,
+they should be calling the `semgrep mcp` command instead of `uvx semgrep-mcp`,
+or instead of connecting to `mcp.semgrep.ai`. Feel free to suggest a change to `mcp.json`
+on behalf of the user, if they are using Cursor!
 
-
-async def get_deployment_slug() -> str:
-    """
-    Fetches and caches the deployment slug from Semgrep API.
-
-    Returns:
-        str: The deployment slug
-
-    Raises:
-        McpError: If unable to fetch deployments or no deployments found
-    """
-    global DEPLOYMENT_SLUG
-
-    # Return cached value if available
-    if DEPLOYMENT_SLUG:
-        return DEPLOYMENT_SLUG
-
-    # Get API token
-    api_token = get_semgrep_app_token()
-    if not api_token:
-        raise McpError(
-            ErrorData(
-                code=INVALID_PARAMS,
-                message="""
-                  SEMGREP_APP_TOKEN environment variable must be set or user
-                  must be logged in to use this tool
-                """,
-            )
-        )
-
-    # Fetch deployments
-    url = f"{SEMGREP_API_URL}/v1/deployments"
-    headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
-
-    try:
-        response = await http_client.get(url, headers=headers)
-        response.raise_for_status()
-        data = response.json()
-
-        # Extract deployment slug - assuming we want the first deployment
-        deployments = data.get("deployments", [])
-        if not deployments or not deployments[0].get("slug"):
-            raise McpError(
-                ErrorData(code=INTERNAL_ERROR, message="No deployments found for this API token")
-            )
-
-        # Cache the slug from the first deployment
-        DEPLOYMENT_SLUG = deployments[0]["slug"]
-        return str(DEPLOYMENT_SLUG)
-
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 401:
-            raise McpError(
-                ErrorData(
-                    code=INVALID_PARAMS,
-                    message="Invalid API token: check your SEMGREP_APP_TOKEN environment variable.",
-                )
-            ) from e
-        else:
-            raise McpError(
-                ErrorData(
-                    code=INTERNAL_ERROR,
-                    message=f"Error fetching deployments: {e.response.text}",
-                )
-            ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(
-                code=INTERNAL_ERROR, message=f"Error fetching deployments from Semgrep: {e!s}"
-            )
-        ) from e
-
-
-@mcp.tool()
-@with_tool_span()
-async def semgrep_findings(
-    ctx: Context,
-    issue_type: list[str] = ["sast", "sca"],  # noqa: B006
-    repos: list[str] = None,  # pyright: ignore  # noqa: RUF013
-    status: str = "open",
-    severities: list[str] = None,  # pyright: ignore  # noqa: RUF013
-    confidence: list[str] = None,  # pyright: ignore  # noqa: RUF013
-    autotriage_verdict: str = "true_positive",
-    page: int = 0,
-    page_size: int = 100,
-) -> list[Finding]:
-    """
-    Fetches findings from the Semgrep AppSec Platform Findings API.
-
-    This function retrieves security, code quality, and supply chain findings that have already been
-    identified by previous Semgrep scans and uploaded to the Semgrep AppSec platform. It does NOT
-    perform a new scan or analyze code directly. Instead, it queries the Semgrep API to access
-    historical scan results for a given repository or set of repositories.
-
-    DEFAULT BEHAVIOR: By default, this tool should filter by the current repository. The model
-    should determine the current repository name and pass it in the 'repos' parameter to ensure
-    findings are scoped to the relevant codebase. However, users may explicitly request findings
-    from other repositories, in which case the model should respect that request.
-
-    Use this function when a prompt requests a summary, list, or analysis of existing findings,
-    such as:
-        - "Please list the top 10 security findings and propose solutions for them."
-        - "Show all open critical vulnerabilities in this repository."
-        - "Summarize the most recent Semgrep scan results."
-        - "Get findings from repository X" (explicitly requesting different repo)
-
-    This function is ideal for:
-    - Reviewing, listing, or summarizing findings from past scans.
-    - Providing actionable insights or remediation advice based on existing scan data.
-
-    Do NOT use this function to perform a new scan or check code that has not yet been analyzed by
-    Semgrep. For new scans, use the appropriate scanning function.
-
-    Args:
-        issue_type (Optional[List[str]]): Filter findings by type. Use 'sast' for code analysis
-            findings and 'sca' for supply chain analysis findings (e.g., ['sast'], ['sca']).
-        status (Optional[str]): Filter findings by status (default: 'open').
-        repos (Optional[List[str]]): List of repository names to filter results. By default, should
-            include the current repository name to scope findings appropriately. Can be overridden
-            when users explicitly request findings from other repositories.
-        severities (Optional[List[str]]): Filter findings by severity (e.g., ['critical', 'high']).
-        confidence (Optional[List[str]]): Filter findings by confidence level (e.g., ['high']).
-        autotriage_verdict (Optional[str]): Filter findings by auto-triage verdict
-            (default: 'true_positive').
-        page (Optional[int]): Page number for paginated results. (default: 0)
-        page_size (int): Number of findings per page (default: 100, min: 100, max: 3000).
-
-    Returns:
-        List[Finding]: A list of findings matching the specified filters, where each finding
-        contains details such as rule ID, description, severity, file location, and remediation
-        guidance if available.
-    """
-    allowed_issue_types = {"sast", "sca"}
-    if not set(issue_type).issubset(allowed_issue_types):
-        invalid_types = ", ".join(set(issue_type) - allowed_issue_types)
-        raise McpError(
-            ErrorData(
-                code=INVALID_PARAMS,
-                message=f"Invalid issue_type(s): {invalid_types}. "
-                "Allowed values are 'sast' and 'sca'.",
-            )
-        )
-
-    if not (100 <= page_size <= 3000):
-        raise McpError(
-            ErrorData(code=INVALID_PARAMS, message="page_size must be between 100 and 3000.")
-        )
-
-    deployment = await get_deployment_slug()
-    api_token = get_semgrep_app_token()
-    if not api_token:
-        raise McpError(
-            ErrorData(
-                code=INVALID_PARAMS,
-                message="SEMGREP_APP_TOKEN environment variable must be set to use this tool. "
-                "Create a token at semgrep.dev to continue.",
-            )
-        )
-
-    url = f"https://semgrep.dev/api/v1/deployments/{deployment}/findings"
-    headers = {"Authorization": f"Bearer {api_token}", "Accept": "application/json"}
-
-    params_to_filter: dict[str, Any] = {
-        "issue_type": issue_type,
-        "status": status,
-        "repos": ",".join(repos) if repos else None,
-        "severities": severities,
-        "confidence": confidence,
-        "autotriage_verdict": autotriage_verdict,
-        "page": page,
-        "page_size": page_size,
+It should look like this:
+```json
+{
+  "mcpServers": {
+    "semgrep": {
+      "command": "semgrep",
+      "args": ["mcp"]
     }
-    params = {k: v for k, v in params_to_filter.items() if v is not None}
+  }
+}
+```
 
-    try:
-        response = await http_client.get(url, headers=headers, params=params)
-        response.raise_for_status()
-        data = response.json()
-        return [Finding.model_validate(finding) for finding in data.get("findings", [])]
-    except httpx.HTTPStatusError as e:
-        if e.response.status_code == 401:
-            raise McpError(
-                ErrorData(
-                    code=INVALID_PARAMS,
-                    message="Invalid API token: check your SEMGREP_APP_TOKEN environment variable.",
-                )
-            ) from e
-        elif e.response.status_code == 404:
-            raise McpError(
-                ErrorData(
-                    code=INVALID_PARAMS,
-                    message=f"Deployment '{deployment}' not found or you don't have access to it.",
-                )
-            ) from e
-        else:
-            raise McpError(
-                ErrorData(
-                    code=INTERNAL_ERROR,
-                    message=f"Error fetching findings: {e.response.text}",
-                )
-            ) from e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error fetching findings from Semgrep: {e!s}")
-        ) from e
+NOTE: You should not attempt to call `semgrep` manually via the CLI, as
+it is better for the user to use the new Semgrep MCP server. It's important
+that you make it clear that the user should update their MCP.
+"""
 
 
-@mcp.tool()
-@with_tool_span()
-async def semgrep_scan_with_custom_rule(
-    ctx: Context,
-    code_files: list[dict[str, str]] = REMOTE_CODE_FILES_FIELD,
-    rule: str = RULE_FIELD,
-) -> SemgrepScanResult:
-    """
-    Runs a Semgrep scan with a custom rule on provided code content
-    and returns the findings in JSON format
-
-    Use this tool when you need to:
-      - scan code files for specific security vulnerability not covered by the default Semgrep rules
-      - scan code files for specific issue not covered by the default Semgrep rules
-    """
-    # Validate code_files
-    validated_code_files = validate_remote_files(code_files)
-    temp_dir = None
-    try:
-        # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(validated_code_files)
-        # Write rule to file
-        rule_file_path = os.path.join(temp_dir, "rule.yaml")
-        with open(rule_file_path, "w") as f:
-            f.write(rule)
-
-        # Run semgrep scan with custom rule
-        args = get_semgrep_scan_args(temp_dir, rule_file_path)
-        output = await run_semgrep_output(top_level_span=None, args=args)
-        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
-
-        attach_scan_metrics(get_current_span(), results, "custom")
-
-        remove_temp_dir_from_results(results, temp_dir)
-        return results
-
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
-
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-@mcp.tool()
-@with_tool_span()
-async def get_abstract_syntax_tree(
-    ctx: Context,
-    code: str = Field(description="The code to get the AST for"),
-    language: str = Field(description="The programming language of the code"),
-) -> str:
-    """
-    Returns the Abstract Syntax Tree (AST) for the provided code file in JSON format
-
-    Use this tool when you need to:
-      - get the Abstract Syntax Tree (AST) for the provided code file\
-      - get the AST of a file
-      - understand the structure of the code in a more granular way
-      - see what a parser sees in the code
-    """
-    temp_dir = None
-    temp_file_path = ""
-    try:
-        # Create temporary directory and file for AST generation
-        temp_dir = tempfile.mkdtemp(prefix="semgrep_ast_")
-        temp_file_path = os.path.join(temp_dir, "code.txt")  # safe
-
-        # Write content to file
-        with open(temp_file_path, "w") as f:
-            f.write(code)
-
-        args = [
-            "--experimental",
-            "--dump-ast",
-            "-l",
-            language,
-            "--json",
-            temp_file_path,
-        ]
-        return await run_semgrep_output(top_level_span=None, args=args)
-
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except OSError as e:
-        raise McpError(
-            ErrorData(
-                code=INTERNAL_ERROR,
-                message=f"Failed to create or write to file {temp_file_path}: {e!s}",
-            )
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-# ---------------------------------------------------------------------------------
-# Scanning tools
-# ---------------------------------------------------------------------------------
-
-
-@with_tool_span()
-async def semgrep_scan_cli(
-    ctx: Context,
-    code_files: list[CodeFile],
-    config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult:
-    """
-    Runs a Semgrep scan on provided code content and returns the findings in JSON format
-
-    Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
-    CLI scan, or an RPC-based scan.
-
-    Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
-
-    Use this tool when you need to:
-      - scan code files for security vulnerabilities
-      - scan code files for other issues
-    """
-
-    # Validate config
-    config = validate_config(config)
-
-    temp_dir = None
-    try:
-        # Create temporary files from code content
-        temp_dir = create_temp_files_from_code_content(code_files)
-        args = get_semgrep_scan_args(temp_dir, config)
-        output = await run_semgrep_output(top_level_span=None, args=args)
-        results: SemgrepScanResult = SemgrepScanResult.model_validate_json(output)
-        remove_temp_dir_from_results(results, temp_dir)
-
-        attach_scan_metrics(get_current_span(), results, config)
-
-        return results
-
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
-
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-@with_tool_span()
-async def semgrep_scan_rpc(
-    ctx: Context,
-    code_files: list[CodeFile],
-) -> CliOutput:
-    """
-    Runs a Semgrep scan on provided code content using the new Semgrep RPC feature.
-
-    This should run much faster than the comparative `semgrep_scan` tool.
-    """
-
-    temp_dir = None
-    try:
-        # TODO: perhaps should return more interpretable results?
-        context: SemgrepContext = ctx.request_context.lifespan_context
-        cli_output = await run_semgrep_via_rpc(context, code_files)
-
-        attach_rpc_scan_metrics(get_current_span(), cli_output)
-
-        return cli_output
-    except McpError as e:
-        raise e
-    except ValidationError as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error parsing semgrep output: {e!s}")
-        ) from e
-    except Exception as e:
-        raise McpError(
-            ErrorData(code=INTERNAL_ERROR, message=f"Error running semgrep scan: {e!s}")
-        ) from e
-
-    finally:
-        if temp_dir:
-            # Clean up temporary files
-            shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-async def semgrep_scan_core(
-    ctx: Context,
-    code_files: list[CodeFile],
-    config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult | CliOutput:
-    """
-    Runs a Semgrep scan on provided CodeFile objects and returns the findings in JSON format
-
-    Depending on whether `USE_SEMGREP_RPC` is set, this tool will either run a `pysemgrep`
-    CLI scan, or an RPC-based scan.
-
-    Respectively, this will cause us to return either a `SemgrepScanResult` or a `CliOutput`.
-    """
-
-    context: SemgrepContext = ctx.request_context.lifespan_context
-
-    paths = [cf.path for cf in code_files]
-
-    if context.process is not None:
-        if config is not None:
-            # This should hopefully just cause the agent to call us back with
-            # the correct parameters.
-            raise McpError(
-                ErrorData(
-                    code=INVALID_PARAMS,
-                    message="""
-                    `config` is not supported when using the RPC-based scan.
-                    Try calling again without that parameter set?
-                  """,
-                )
-            )
-
-        logging.info(f"Running RPC-based scan on paths: {paths}")
-        return await semgrep_scan_rpc(ctx, code_files)
-    else:
-        logging.info(f"Running CLI-based scan on paths: {paths}")
-        return await semgrep_scan_cli(ctx, code_files, config)
-
-
-@mcp.tool()
-@with_tool_span()
-async def semgrep_scan_remote(
-    ctx: Context,
-    code_files: list[dict[str, str]] = REMOTE_CODE_FILES_FIELD,
-    # TODO: currently only for CLI-based scans
-    config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult | CliOutput:
-    """
-    Runs a Semgrep scan on provided code content and returns the findings in JSON format
-
-    Use this tool when you need to:
-      - scan code files for security vulnerabilities
-      - scan code files for other issues
-    """
-
-    # Implementer's note:
-    # This is one possible entry point for regular scanning, depending on whether
-    # the server is remotely hosted or not.
-    # If the server is hosted, only this tool will be available, and not the
-    # `semgrep_scan` tool.
-
-    validated_code_files = validate_remote_files(code_files)
-
-    return await semgrep_scan_core(ctx, validated_code_files, config)
-
-
-@mcp.tool()
-@with_tool_span()
-async def semgrep_scan(
-    ctx: Context,
-    code_files: list[dict[str, str]] = LOCAL_CODE_FILES_FIELD,
-    config: str | None = CONFIG_FIELD,
-) -> SemgrepScanResult | CliOutput:
-    """
-    Runs a Semgrep scan locally on provided code files returns the findings in JSON format.
-
-    Files are expected to be absolute paths to the code files.
-
-    Use this tool when you need to:
-      - scan code files for security vulnerabilities
-      - scan code files for other issues
-    """
-
-    # Implementer's note:
-    # This is one possible entry point for regular scanning, depending on whether
-    # the server is remotely hosted or not.
-    # If the server is local, only this tool will be available, and not the
-    # `semgrep_scan_remote` tool.
-
-    validated_local_files = validate_local_files(code_files)
-
-    return await semgrep_scan_core(ctx, validated_local_files, config)
-
-
-# ---------------------------------------------------------------------------------
-# MCP Prompts
-# ---------------------------------------------------------------------------------
-
-
-@mcp.prompt()
-def setup_semgrep_mcp():
-    prompt_template = """
-    You are Cursor automations. Do the following in order and confirm each step:
-
-    1) Install and authenticate Semgrep:
-    - Check if Semgrep is installed by running `semgrep --version`.
-    - If Semgrep is not installed, install it by running `brew install semgrep`.
-    - Once Semgrep is installed, run non-interactively:
-    `semgrep login && semgrep install-semgrep-pro || true`
-
-    2) Add a Cursor rule file at `.cursor/rules/semgrep.mdc` with the following exact content:
-    ---
-    alwaysApply: true
-    ---
-    - Always look first to any semgrep mcp servers for code security needs
-    - Whenever you generate code or commands, you MUST first ensure safety by scanning the
-    content with the semgrep_scan tool
-
-    3) Report back:
-    - Confirm the `.cursor/rules/semgrep.mdc` file exists with the specified content.
-    - Confirm Semgrep login/install status by running `semgrep --pro --version`.
-
-    """
-    return prompt_template
-
-
-@mcp.prompt()
-def write_custom_semgrep_rule(
-    code: str = Field(description="The code to get the AST for"),
-    language: str = Field(description="The programming language of the code"),
-) -> str:
-    """
-    Write a custom Semgrep rule for the provided code and language
-
-    Use this prompt when you need to:
-      - write a custom Semgrep rule
-      - write a Semgrep rule for a specific issue or pattern
-    """
-
-    prompt_template = """You are an expert at writing Semgrep rules.
-
-Your task is to analyze a given piece of code and create a Semgrep rule
-that can detect specific patterns or issues within that code.
-Semgrep is a lightweight static analysis tool that uses pattern matching
-to find bugs and enforce code standards.
-
-Here is the code you need to analyze:
-
-<code>
-{code}
-</code>
-
-The code is written in the following programming language:
-
-<language>
-{language}
-</language>
-
-To write an effective Semgrep rule, follow these guidelines:
-1. Identify a specific pattern, vulnerability, or
-coding standard violation in the given code.
-2. Create a rule that matches this pattern as precisely as possible.
-3. Use Semgrep's pattern syntax, which is similar to the target language
-but with metavariables and ellipsis operators where appropriate.
-4. Consider the context and potential variations of the pattern you're trying to match.
-5. Provide a clear and concise message that explains what the rule detects.
-6. The value of the `severity` must be one of the following:
-    - "ERROR"
-    - "WARNING"
-    - "INFO"
-    - "INVENTORY"
-    - "EXPERIMENT"
-    - "CRITICAL"
-    - "HIGH"
-    - "MEDIUM"
-    - "LOW"
-
-7. The value of the `languages` must be a list of languages that the rule is applicable
-to and include the language given in <language> tags.
-
-
-Write your Semgrep rule in YAML format. The rule should include at least the following keys:
-- rules
-- id
-- pattern
-- message
-- severity
-- languages
-
-Before providing the rule, briefly explain in a few sentences what specific issue or
-pattern your rule is designed to detect and why it's important.
-
-Then, output your Semgrep rule inside <semgrep_rule> tags.
-
-Ensure that the rule is properly formatted in YAML.
-Make sure to include all the required keys and values in the rule."""
-
-    return prompt_template.format(code=code, language=language)
-
-
-# ---------------------------------------------------------------------------------
+## ---------------------------------------------------------------------------------
 # MCP Resources
 # ---------------------------------------------------------------------------------
 
@@ -1061,37 +436,6 @@ async def get_semgrep_rule_yaml(rule_id: str = RULE_ID_FIELD) -> str:
 async def health(request: Request) -> JSONResponse:
     """Health check endpoint"""
     return JSONResponse({"status": "ok", "version": __version__})
-
-
-# ---------------------------------------------------------------------------------
-# Disabling tools
-# ---------------------------------------------------------------------------------
-
-TOOL_DISABLE_ENV_VARS = {
-    "SEMGREP_RULE_SCHEMA_DISABLED": "semgrep_rule_schema",
-    "GET_SUPPORTED_LANGUAGES_DISABLED": "get_supported_languages",
-    "SEMGREP_FINDINGS_DISABLED": "semgrep_findings",
-    "SEMGREP_SCAN_WITH_CUSTOM_RULE_DISABLED": "semgrep_scan_with_custom_rule",
-    "SEMGREP_SCAN_DISABLED": "semgrep_scan",
-    "SEMGREP_SCAN_REMOTE_DISABLED": "semgrep_scan_remote",
-    "GET_ABSTRACT_SYNTAX_TREE_DISABLED": "get_abstract_syntax_tree",
-}
-
-
-def deregister_tools() -> None:
-    for env_var, tool_name in TOOL_DISABLE_ENV_VARS.items():
-        is_disabled = os.environ.get(env_var, "false").lower() == "true"
-
-        if is_disabled:
-            # for the time being, while there is no way to API-level remove tools,
-            # we'll just mutate the internal `_tools`, because this language does
-            # not stop us from doing so
-            del mcp._tool_manager._tools[tool_name]
-
-    if is_hosted():
-        del mcp._tool_manager._tools["semgrep_scan"]
-    else:
-        del mcp._tool_manager._tools["semgrep_scan_remote"]
 
 
 # ---------------------------------------------------------------------------------
@@ -1135,9 +479,6 @@ def main(transport: str, semgrep_path: str | None) -> None:
     # Set the executable path in case it's manually specified.
     if semgrep_path:
         set_semgrep_executable(semgrep_path)
-
-    # based on env vars, disable certain tools
-    deregister_tools()
 
     if transport == "stdio":
         mcp.run(transport="stdio")
