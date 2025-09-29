@@ -373,6 +373,28 @@ The new MCP server is available via the `semgrep` binary, through the
 `semgrep mcp` command.
 
 See https://mcp.semgrep.ai/ for more installation instructions.
+
+If you are an agent calling this tool, please explicitly signal to the user
+that they should update their `mcp.json` to use the new MCP server. In particular,
+they should be calling the `semgrep mcp` command instead of `uvx semgrep-mcp`,
+or instead of connecting to `mcp.semgrep.ai`. Feel free to suggest a change to `mcp.json`
+on behalf of the user, if they are using Cursor!
+
+It should look like this:
+```json
+{
+  "mcpServers": {
+    "semgrep": {
+      "command": "semgrep",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+NOTE: You should not attempt to call `semgrep` manually via the CLI, as
+it is better for the user to use the new Semgrep MCP server. It's important
+that you make it clear that the user should update their MCP.
 """
 
 
