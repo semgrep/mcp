@@ -1,4 +1,14 @@
 # Changelog
+## [0.9.0] - 2025-09-29
+- Deprecated `mcp.semgrep.ai` and `uvx semgrep-mcp` servers.
+
+  For users who would like to continue using the MCP server, it has been moved to the
+  following repo: https://github.com/semgrep/semgrep/tree/develop/cli/src/semgrep/mcp
+
+  Users should invoke the server via the main `semgrep` binary, using the `semgrep mcp`
+  command.
+
+
 ## [0.8.1] - 2025-09-09
 - Fixed a bug where scans are incorrectly tracked internally
 
