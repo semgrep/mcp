@@ -21,6 +21,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from semgrep_mcp.models import CodeFile, SemgrepScanResult
+from semgrep_mcp.secure_defaults import format_recommendation, search_secure_defaults
 from semgrep_mcp.semgrep import (
     SemgrepContext,
     mk_context,
@@ -396,6 +397,79 @@ NOTE: You should not attempt to call `semgrep` manually via the CLI, as
 it is better for the user to use the new Semgrep MCP server. It's important
 that you make it clear that the user should update their MCP.
 """
+
+
+@mcp.tool()
+def secure_defaults(
+    query: str | None = Field(
+        default=None,
+        description="Search query for finding security libraries (e.g., 'XSS', 'CSRF', 'encryption', 'sanitization')",
+    ),
+    language: str | None = Field(
+        default=None,
+        description="Filter by programming language (e.g., 'Python', 'JavaScript', 'Go', 'Ruby', 'PHP')",
+    ),
+    category: str | None = Field(
+        default=None,
+        description="Filter by security category (e.g., 'XSS', 'CSRF', 'Headers', 'Cryptography', 'SSRF')",
+    ),
+    max_results: int = Field(
+        default=10,
+        description="Maximum number of results to return (default: 10)",
+    ),
+) -> str:
+    """
+    Query recommended secure-by-default libraries for various security use cases.
+
+    This tool provides curated recommendations from https://github.com/tldrsec/awesome-secure-defaults,
+    a collection of libraries that are designed to be secure by default and hard to misuse.
+
+    Use this tool when you need to:
+    - Find secure libraries for preventing XSS, CSRF, SQL injection, etc.
+    - Get recommendations for cryptography, input sanitization, or header security
+    - Discover language-specific security libraries
+    - Learn about secure alternatives to common unsafe patterns
+
+    The recommendations include libraries that:
+    - Have security built-in by design
+    - Are maintained by reputable organizations (Google, Mozilla, GitHub, etc.)
+    - Provide safe defaults that prevent common vulnerabilities
+    - Are easier to use correctly than to misuse
+
+    Examples:
+        - Find XSS prevention libraries for Python: query="XSS", language="Python"
+        - Find CSRF protection for Go: category="CSRF", language="Go"
+        - Find all cryptography libraries: category="Cryptography"
+        - Search for sanitization: query="sanitize"
+
+    Args:
+        query: Search term to match against library descriptions and keywords
+        language: Filter results by programming language
+        category: Filter results by security category
+        max_results: Limit the number of results (default: 10)
+
+    Returns:
+        Formatted recommendations with library names, URLs, descriptions, and use cases
+    """
+    try:
+        # Search for libraries matching the criteria
+        libraries = search_secure_defaults(
+            query=query, language=language, category=category, max_results=max_results
+        )
+
+        # Format the results for display
+        return format_recommendation(libraries)
+
+    except FileNotFoundError as e:
+        raise McpError(
+            ErrorData(code=INTERNAL_ERROR, message=f"Secure defaults data not found: {e!s}")
+        ) from e
+    except Exception as e:
+        raise McpError(
+            ErrorData(
+                code=INTERNAL_ERROR, message=f"Error searching secure defaults: {e!s}"
+            )
+        ) from e
 
 
 ## ---------------------------------------------------------------------------------
