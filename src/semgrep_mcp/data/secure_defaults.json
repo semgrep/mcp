@@ -1,0 +1,498 @@
+[
+  {
+    "name": "helmetjs/helmet",
+    "url": "https://github.com/helmetjs/helmet",
+    "description": "Helmet helps secure Express apps by setting HTTP response headers.",
+    "languages": ["NodeJS", "JavaScript"],
+    "category": "Headers",
+    "keywords": ["http", "headers", "express", "nodejs", "security headers", "helmet"]
+  },
+  {
+    "name": "github/secure_headers",
+    "url": "https://github.com/github/secure_headers",
+    "description": "Manages application of security headers with many safe defaults",
+    "languages": ["Ruby"],
+    "category": "Headers",
+    "keywords": ["http", "headers", "ruby", "security headers", "safe defaults"]
+  },
+  {
+    "name": "arkadiyt/ssrf_filter",
+    "url": "https://github.com/arkadiyt/ssrf_filter",
+    "description": "A ruby gem for defending against Server Side Request Forgery (SSRF) attacks",
+    "languages": ["Ruby"],
+    "category": "SSRF",
+    "keywords": ["ssrf", "ruby", "request forgery", "server side request forgery"]
+  },
+  {
+    "name": "google/tink",
+    "url": "https://github.com/tink-crypto",
+    "description": "A multi-language, cross-platform library that provides cryptographic APIs that are secure, easy to use correctly, and hard(er) to misuse.",
+    "languages": ["Java", "C++", "Go", "Python", "Objective-C"],
+    "category": "Cryptography",
+    "keywords": ["crypto", "cryptography", "encryption", "tink", "multi-language", "secure crypto"]
+  },
+  {
+    "name": "cure53/DOMPurify",
+    "url": "https://github.com/cure53/DOMPurify",
+    "description": "A DOM-only, super-fast, uber-tolerant XSS sanitizer for HTML, MathML and SVG",
+    "languages": ["JavaScript"],
+    "category": "HTML Sanitizer (XSS prevention)",
+    "keywords": ["xss", "html sanitizer", "javascript", "dom", "dompurify", "sanitization"]
+  },
+  {
+    "name": "mozilla/bleach",
+    "url": "https://github.com/mozilla/bleach",
+    "description": "An allowed-list-based HTML sanitizing library that escapes or strips markup and attributes",
+    "languages": ["Python"],
+    "category": "HTML Sanitizer (XSS prevention)",
+    "keywords": ["xss", "html sanitizer", "python", "bleach", "sanitization", "allowed-list"]
+  },
+  {
+    "name": "pallets/markupsafe",
+    "url": "https://github.com/pallets/markupsafe",
+    "description": "Safely add untrusted strings to HTML/XML markup.",
+    "languages": ["Python"],
+    "category": "HTML Sanitizer (XSS prevention)",
+    "keywords": ["xss", "html", "xml", "python", "markup", "sanitization"]
+  },
+  {
+    "name": "symfony/html-sanitizer",
+    "url": "https://github.com/symfony/html-sanitizer",
+    "description": "Provides an object-oriented API to sanitize untrusted HTML input for safe insertion into a document's DOM.",
+    "languages": ["PHP"],
+    "category": "HTML Sanitizer (XSS prevention)",
+    "keywords": ["xss", "html sanitizer", "php", "symfony", "sanitization", "dom"]
+  },
+  {
+    "name": "null8626/decancer",
+    "url": "https://github.com/null8626/decancer",
+    "description": "A tiny package that removes common unicode confusables/homoglyphs from strings.",
+    "languages": ["Rust", "JavaScript", "C", "C++", "Java", "Python"],
+    "category": "Input Sanitization",
+    "keywords": ["unicode", "homoglyphs", "confusables", "sanitization", "input validation"]
+  },
+  {
+    "name": "davisjam/safe-regex",
+    "url": "https://github.com/davisjam/safe-regex",
+    "description": "Detect possibly catastrophic, exponential-time regular expressions",
+    "languages": ["JavaScript"],
+    "category": "Regex",
+    "keywords": ["regex", "redos", "regular expressions", "javascript", "validation"]
+  },
+  {
+    "name": "ikkisoft/SerialKiller",
+    "url": "https://github.com/ikkisoft/SerialKiller",
+    "description": "Look-Ahead Java Deserialization Library",
+    "languages": ["Java"],
+    "category": "Deserialization",
+    "keywords": ["java", "deserialization", "serialization", "security"]
+  },
+  {
+    "name": "paragonie/anti-csrf",
+    "url": "https://github.com/paragonie/anti-csrf",
+    "description": "Full-Featured Anti-CSRF Library",
+    "languages": ["PHP"],
+    "category": "CSRF",
+    "keywords": ["csrf", "php", "cross-site request forgery", "token"]
+  },
+  {
+    "name": "paragonie/constant_time_encoding",
+    "url": "https://github.com/paragonie/constant_time_encoding",
+    "description": "Character encoding functions that do not leak information about what you are encoding/decoding via processor cache misses",
+    "languages": ["PHP"],
+    "category": "Information Leakage",
+    "keywords": ["php", "timing attack", "constant time", "encoding", "side channel"]
+  },
+  {
+    "name": "paragonie/halite",
+    "url": "https://github.com/paragonie/halite",
+    "description": "High-level cryptography interface powered by libsodium",
+    "languages": ["PHP"],
+    "category": "Cryptography",
+    "keywords": ["php", "crypto", "cryptography", "libsodium", "encryption"]
+  },
+  {
+    "name": "paragonie/ionizer",
+    "url": "https://github.com/paragonie/ionizer",
+    "description": "Input Filter System for PHP Software",
+    "languages": ["PHP"],
+    "category": "Input Filteration",
+    "keywords": ["php", "input validation", "filtering", "sanitization"]
+  },
+  {
+    "name": "paragonie/password_lock",
+    "url": "https://github.com/paragonie/password_lock",
+    "description": "Wraps Bcrypt-SHA2 in Authenticated Encryption",
+    "languages": ["PHP"],
+    "category": "Cryptography",
+    "keywords": ["php", "password", "bcrypt", "encryption", "authentication"]
+  },
+  {
+    "name": "jvoisin/snuffleupagus",
+    "url": "https://github.com/jvoisin/snuffleupagus",
+    "description": "Security module for php7 and php8 - Killing bugclasses and virtual-patching the rest!",
+    "languages": ["PHP"],
+    "category": "Misc",
+    "keywords": ["php", "security module", "virtual patching", "hardening"]
+  },
+  {
+    "name": "BePsvPT/secure-headers",
+    "url": "https://github.com/BePsvPT/secure-headers",
+    "description": "PHP Secure Headers",
+    "languages": ["PHP"],
+    "category": "Headers",
+    "keywords": ["php", "headers", "security headers", "http"]
+  },
+  {
+    "name": "gorilla/csrf",
+    "url": "https://github.com/gorilla/csrf",
+    "description": "Cross Site Request Forgery (CSRF) prevention middleware for Go web applications & services",
+    "languages": ["Go", "Golang"],
+    "category": "CSRF",
+    "keywords": ["go", "golang", "csrf", "middleware", "cross-site request forgery"]
+  },
+  {
+    "name": "justinas/nosurf",
+    "url": "https://github.com/justinas/nosurf",
+    "description": "CSRF protection middleware for Go.",
+    "languages": ["Go", "Golang"],
+    "category": "CSRF",
+    "keywords": ["go", "golang", "csrf", "middleware", "protection"]
+  },
+  {
+    "name": "sdsdkkk/safe_redirect",
+    "url": "https://github.com/sdsdkkk/safe_redirect",
+    "description": "Keep Rails apps safe from open redirects",
+    "languages": ["Ruby"],
+    "category": "Open Redirect",
+    "keywords": ["ruby", "rails", "open redirect", "redirect", "validation"]
+  },
+  {
+    "name": "Shopify/redirect_safely",
+    "url": "https://github.com/Shopify/redirect_safely",
+    "description": "Sanitize redirect_to URLs",
+    "languages": ["Ruby"],
+    "category": "Open Redirect",
+    "keywords": ["ruby", "redirect", "open redirect", "sanitization", "url"]
+  },
+  {
+    "name": "Trendyol/safe-redirect",
+    "url": "https://github.com/Trendyol/safe-redirect",
+    "description": "Library which resolves open-redirection vulnerability when we need to make redirection to a path taken from query string.",
+    "languages": ["TypeScript"],
+    "category": "Open Redirect",
+    "keywords": ["typescript", "redirect", "open redirect", "validation", "query string"]
+  },
+  {
+    "name": "gorilla/securecookie",
+    "url": "https://github.com/gorilla/securecookie",
+    "description": "Encodes and decodes authenticated and optionally encrypted cookie values for Go web applications",
+    "languages": ["Go", "Golang"],
+    "category": "CookieJar",
+    "keywords": ["go", "golang", "cookie", "encryption", "authentication"]
+  },
+  {
+    "name": "google/safevalues",
+    "url": "https://github.com/google/safevalues",
+    "description": "Prevent Cross-Site Scripting vulnerabilities in TypeScript (and JavaScript). It is meant to be used together with tsec to provide strong security guarantees and help you deploy Trusted Types and other CSP restrictions in your applications",
+    "languages": ["TypeScript", "JavaScript"],
+    "category": "XSS",
+    "keywords": ["typescript", "javascript", "xss", "trusted types", "csp", "cross-site scripting"]
+  },
+  {
+    "name": "google/wuffs",
+    "url": "https://github.com/google/wuffs",
+    "description": "Parsing, decoding and encoding Untrusted File Formats Safely",
+    "languages": ["C"],
+    "category": "File Handling",
+    "keywords": ["c", "file parsing", "file formats", "safe parsing", "decoder"]
+  },
+  {
+    "name": "google/safeopen",
+    "url": "https://github.com/google/safeopen",
+    "description": "Safe-by-construction library with file open/create primitives for Golang that are not vulnerable to path traversal attacks",
+    "languages": ["Go", "Golang"],
+    "category": "Path Traversal",
+    "keywords": ["go", "golang", "path traversal", "file handling", "safe file operations"]
+  },
+  {
+    "name": "google/safe-active-record",
+    "url": "https://github.com/google/safe-active-record",
+    "description": "A security middleware to defend against SQL injection in Ruby on Rails Active Record.",
+    "languages": ["Ruby"],
+    "category": "SQLi",
+    "keywords": ["ruby", "rails", "sql injection", "activerecord", "database"]
+  },
+  {
+    "name": "google/safetext",
+    "url": "https://github.com/google/safetext",
+    "description": "Safe-by-construction libraries for producing formats like YAML",
+    "languages": ["Go", "Golang"],
+    "category": "Injection",
+    "keywords": ["go", "golang", "yaml", "injection", "safe construction"]
+  },
+  {
+    "name": "google/safehtml",
+    "url": "https://github.com/google/safehtml",
+    "description": "Immutable string-like types that wrap web types such as HTML, JavaScript and CSS. These wrappers are safe by construction against XSS and similar web vulnerabilities",
+    "languages": ["Go", "Golang"],
+    "category": "XSS",
+    "keywords": ["go", "golang", "xss", "html", "javascript", "css", "safe types"]
+  },
+  {
+    "name": "google/securemessage",
+    "url": "https://github.com/google/securemessage",
+    "description": "A portable crypto library that exposes a restricted API that is secure by design, for use as a black-box building block in cryptographic protocols",
+    "languages": ["C++"],
+    "category": "Cryptography",
+    "keywords": ["c++", "crypto", "cryptography", "messaging", "secure protocols"]
+  },
+  {
+    "name": "google/re2",
+    "url": "https://github.com/google/re2",
+    "description": "A fast, safe, thread-friendly alternative to backtracking regular expression engines",
+    "languages": ["C++"],
+    "category": "Regex",
+    "keywords": ["c++", "regex", "regular expressions", "re2", "safe regex", "no redos"]
+  },
+  {
+    "name": "google/safearchive",
+    "url": "https://github.com/google/safearchive",
+    "description": "Safe-by-construction libraries for processing tar and zip archives, to replace unsafe alternatives like archive/tar and archive/zip that are at risk of path traversal attacks. Besides crafted filename entries in the archive, this library also protects from symbolic link attacks.",
+    "languages": ["Go", "Golang"],
+    "category": "Zip Handling",
+    "keywords": ["go", "golang", "zip", "tar", "archive", "path traversal", "safe extraction"]
+  },
+  {
+    "name": "google/go-safeweb",
+    "url": "https://github.com/google/go-safeweb",
+    "description": "A collection of libraries for writing secure-by-default HTTP servers in Go.",
+    "languages": ["Go", "Golang"],
+    "category": "XSS, XSRF",
+    "keywords": ["go", "golang", "web", "xss", "xsrf", "http", "secure defaults"]
+  },
+  {
+    "name": "doyensec/safeurl",
+    "url": "https://github.com/doyensec/safeurl",
+    "description": "Implements a safeurl.Client wrapper around Go's native net/http.Client and performs validation on the incoming request against the configured allow and block lists. It also implements mitigation for DNS rebinding attacks.",
+    "languages": ["Go", "Golang"],
+    "category": "SSRF",
+    "keywords": ["go", "golang", "ssrf", "dns rebinding", "http client", "url validation"]
+  },
+  {
+    "name": "mustache/mustache",
+    "url": "https://github.com/mustache/mustache",
+    "description": "Logic-less Ruby templates.",
+    "languages": ["Ruby"],
+    "category": "Templating",
+    "keywords": ["ruby", "templates", "mustache", "logic-less", "safe templating"]
+  },
+  {
+    "name": "Shopify/liquid",
+    "url": "https://github.com/Shopify/liquid",
+    "description": "Safe, customer facing template language for flexible web apps.",
+    "languages": ["Ruby"],
+    "category": "Templating",
+    "keywords": ["ruby", "templates", "liquid", "safe templating", "shopify"]
+  },
+  {
+    "name": "handlebars-lang/handlebars.js",
+    "url": "https://github.com/handlebars-lang/handlebars.js",
+    "description": "Minimal templating on steroids.",
+    "languages": ["JavaScript"],
+    "category": "Templating",
+    "keywords": ["javascript", "templates", "handlebars", "templating engine"]
+  },
+  {
+    "name": "salesforce/handlebars-php",
+    "url": "https://github.com/salesforce/handlebars-php",
+    "description": "A simple, logic-less, yet powerful templating engine for PHP.",
+    "languages": ["PHP"],
+    "category": "Templating",
+    "keywords": ["php", "templates", "handlebars", "logic-less", "templating"]
+  },
+  {
+    "name": "huggingface/safetensors",
+    "url": "https://github.com/huggingface/safetensors",
+    "description": "This repository implements a new simple format for storing tensors safely (as opposed to pickle) and that is still fast (zero-copy).",
+    "languages": ["Python"],
+    "category": "Packing/Unpacking",
+    "keywords": ["python", "tensors", "pickle", "serialization", "machine learning", "safe deserialization"]
+  },
+  {
+    "name": "cloudflare/svg-hush",
+    "url": "https://github.com/cloudflare/svg-hush",
+    "description": "Make arbitrary SVG files as benign and safe to serve as images in other common Web file formats",
+    "languages": ["Rust"],
+    "category": "SVG",
+    "keywords": ["rust", "svg", "sanitization", "image processing", "safe svg"]
+  },
+  {
+    "name": "tiran/defusedxml",
+    "url": "https://github.com/tiran/defusedxml",
+    "description": "Python-only workarounds and fixes for denial of service and other vulnerabilities in Python's XML libraries",
+    "languages": ["Python"],
+    "category": "XXE",
+    "keywords": ["python", "xml", "xxe", "xml external entity", "denial of service"]
+  },
+  {
+    "name": "nahsra/antisamy",
+    "url": "https://github.com/nahsra/antisamy",
+    "description": "a library for performing fast, configurable cleansing of HTML coming from untrusted sources",
+    "languages": ["Java"],
+    "category": "Injection",
+    "keywords": ["java", "html", "sanitization", "injection", "antisamy"]
+  },
+  {
+    "name": "OWASP/csrfguard",
+    "url": "https://github.com/OWASP/www-project-csrfguard",
+    "description": "The aim of this project is to protect Java applications against CSRF attacks with the use of Synchronizer Tokens",
+    "languages": ["Java"],
+    "category": "CSRF",
+    "keywords": ["java", "csrf", "owasp", "synchronizer tokens", "protection"]
+  },
+  {
+    "name": "y-mehta/ssrf-req-filter",
+    "url": "https://github.com/y-mehta/ssrf-req-filter",
+    "description": "Module to prevent SSRF when sending requests in NodeJS. Blocks request to local and private IP addresses",
+    "languages": ["NodeJS", "JavaScript"],
+    "category": "SSRF",
+    "keywords": ["nodejs", "javascript", "ssrf", "ip filtering", "request filtering"]
+  },
+  {
+    "name": "vvo/iron-session",
+    "url": "https://github.com/vvo/iron-session",
+    "description": "Secure, stateless, and cookie-based session library",
+    "languages": ["JavaScript"],
+    "category": "CookieJar",
+    "keywords": ["javascript", "session", "cookie", "stateless", "secure session"]
+  },
+  {
+    "name": "cossacklabs/themis",
+    "url": "https://github.com/cossacklabs/themis",
+    "description": "Easy to use cryptographic framework for data protection: secure messaging with forward secrecy and secure data storage. Has unified APIs across 14 platforms.",
+    "languages": ["Swift", "Objective-C", "Java", "Kotlin", "C", "C++", "Node.js", "Python", "Ruby", "PHP", "Go", "Rust", "WASM"],
+    "category": "Cryptography",
+    "keywords": ["crypto", "cryptography", "multi-platform", "forward secrecy", "secure messaging"]
+  },
+  {
+    "name": "aws/http-desync-guardian",
+    "url": "https://github.com/aws/http-desync-guardian",
+    "description": "Analyze HTTP requests to minimize risks of HTTP Desync attacks (precursor for HTTP request smuggling/splitting).",
+    "languages": ["Rust"],
+    "category": "HTTP Desync",
+    "keywords": ["rust", "http", "desync", "request smuggling", "http smuggling"]
+  },
+  {
+    "name": "rust-ammonia/ammonia",
+    "url": "https://github.com/rust-ammonia/ammonia",
+    "description": "Repair and secure untrusted HTML",
+    "languages": ["Rust"],
+    "category": "HTML Sanitizer (XSS prevention)",
+    "keywords": ["rust", "html", "sanitization", "xss", "ammonia"]
+  },
+  {
+    "name": "techgaun/plug_secex",
+    "url": "https://github.com/techgaun/plug_secex",
+    "description": "Adds various HTTP Headers to make Phoenix/Elixir app more secure",
+    "languages": ["Elixir"],
+    "category": "Headers",
+    "keywords": ["elixir", "phoenix", "headers", "http headers", "security"]
+  },
+  {
+    "name": "TypeError/secure",
+    "url": "https://github.com/TypeError/secure",
+    "description": "Secure headers for Python web frameworks",
+    "languages": ["Python"],
+    "category": "Headers",
+    "keywords": ["python", "headers", "security headers", "web framework"]
+  },
+  {
+    "name": "unrolled/secure",
+    "url": "https://github.com/unrolled/secure",
+    "description": "HTTP middleware for Go that facilitates some quick security wins.",
+    "languages": ["Go", "Golang"],
+    "category": "Multiple",
+    "keywords": ["go", "golang", "middleware", "http", "security", "headers"]
+  },
+  {
+    "name": "juunas11/aspnetcore-security-headers",
+    "url": "https://github.com/juunas11/aspnetcore-security-headers",
+    "description": "Middleware for adding security headers to an ASP.NET Core application.",
+    "languages": [".NET", "C#"],
+    "category": "Headers",
+    "keywords": ["dotnet", "csharp", "aspnetcore", "headers", "security headers", "middleware"]
+  },
+  {
+    "name": "andrewlock/NetEscapades.AspNetCore.SecurityHeaders",
+    "url": "https://github.com/andrewlock/NetEscapades.AspNetCore.SecurityHeaders",
+    "description": "Small package to allow adding security headers to ASP.NET Core websites",
+    "languages": [".NET", "C#"],
+    "category": "Headers",
+    "keywords": ["dotnet", "csharp", "aspnetcore", "headers", "security headers"]
+  },
+  {
+    "name": "GaProgMan/OwaspHeaders.Core",
+    "url": "https://github.com/GaProgMan/OwaspHeaders.Core",
+    "description": "A .NET Core middleware for injecting the Owasp recommended HTTP Headers for increased security",
+    "languages": [".NET", "C#"],
+    "category": "Headers",
+    "keywords": ["dotnet", "csharp", "owasp", "headers", "security headers", "middleware"]
+  },
+  {
+    "name": "mganss/HtmlSanitizer",
+    "url": "https://github.com/mganss/HtmlSanitizer",
+    "description": "Cleans HTML to avoid XSS attacks",
+    "languages": [".NET", "C#"],
+    "category": "HTML Sanitizer (XSS prevention)",
+    "keywords": ["dotnet", "csharp", "html", "sanitization", "xss"]
+  },
+  {
+    "name": "Escape-Technologies/graphql-armor",
+    "url": "https://github.com/Escape-Technologies/graphql-armor",
+    "description": "Highly customizable security middleware for various GraphQL server engines.",
+    "languages": ["JavaScript", "TypeScript"],
+    "category": "Multiple",
+    "keywords": ["graphql", "security", "middleware", "javascript", "typescript"]
+  },
+  {
+    "name": "microcosm-cc/bluemonday",
+    "url": "https://github.com/microcosm-cc/bluemonday",
+    "description": "a fast golang HTML sanitizer (inspired by the OWASP Java HTML Sanitizer) to scrub user generated content of XSS",
+    "languages": ["Go", "Golang"],
+    "category": "HTML Sanitizer (XSS prevention)",
+    "keywords": ["go", "golang", "html", "sanitization", "xss", "bluemonday"]
+  },
+  {
+    "name": "gradio-app/safehttpx",
+    "url": "https://github.com/gradio-app/safehttpx",
+    "description": "Python library to prevent SSRF through wrapper around httpx.AsyncClient.get()",
+    "languages": ["Python"],
+    "category": "SSRF",
+    "keywords": ["python", "ssrf", "httpx", "async", "request filtering"]
+  },
+  {
+    "name": "realArcherL/is-path-inside-secure",
+    "url": "https://github.com/realArcherL/is-path-inside-secure",
+    "description": "Securely verifies path containment, resolves symlinks, confirms file existence, and prevents path traversal attacks.",
+    "languages": ["JavaScript"],
+    "category": "Path Traversal",
+    "keywords": ["javascript", "path traversal", "symlinks", "file security", "path validation"]
+  },
+  {
+    "name": "GoogleContainerTools/distroless",
+    "url": "https://github.com/GoogleContainerTools/distroless/",
+    "description": "Language focused docker images, minus the operating system.",
+    "languages": ["Docker"],
+    "category": "Containers",
+    "keywords": ["docker", "containers", "distroless", "minimal", "security"]
+  },
+  {
+    "name": "chainguard-images/images",
+    "url": "https://github.com/chainguard-images/images/",
+    "description": "Chainguard Images is a collection of container images designed for minimalism and security.",
+    "languages": ["Docker"],
+    "category": "Containers",
+    "keywords": ["docker", "containers", "minimal", "security", "chainguard"]
+  }
+]
